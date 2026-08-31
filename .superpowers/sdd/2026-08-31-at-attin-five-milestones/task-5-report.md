@@ -51,4 +51,6 @@
 - Access check: custom owner-only policy, one allowed user, zero groups, zero external visitors.
 - Production URL: `https://at-attin.astronebulae.chatgpt.site`.
 - Private publication exposed two real hosting details: matching root assets bypass the Worker by default, and Sites did not apply the packaged `_headers` file to that static-first response. The final build therefore keeps the public root as a harmless immediate `/login` redirect, embeds the complete app shell inside the Worker, and serves every banking route with anti-framing and restrictive browser headers. A build-contract assertion imports the emitted Worker and proves that a deep route returns the protected At Attin shell.
-- Final Sites version and deployed-origin checks will be appended after the hardened publication.
+- Sites version 3 saved commit `fabb4c98c6b559d5e830b8c2852d63ae021ccff9` with its exact local archive and deployed successfully.
+- Authenticated production checks: `/` returned the redirect-only document; `/settings/agent` returned HTTP 200, the complete app shell, and all required security headers.
+- The selected in-app browser reached the private **Continue with ChatGPT** gate but did not hold a ChatGPT web session. No deployed-origin DOM interaction is claimed; the exact archive's browser UI is covered locally and its emitted production Worker is covered directly.

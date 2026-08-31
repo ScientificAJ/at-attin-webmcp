@@ -55,4 +55,8 @@ One low-severity deployment weakness was validated before release: the new trust
 
 ## Deployment proof
 
-Final Sites version, deployment status, direct-route check, and deployed-origin read/mutation evidence will be recorded after publication.
+- Sites version 3 saved from commit `fabb4c98c6b559d5e830b8c2852d63ae021ccff9` with the locally built archive and deployed successfully to production.
+- Access remained private and owner-only: one allowed user, zero groups, and zero external visitors.
+- An authenticated root request returned only the intentional `/login` redirect document.
+- An authenticated direct request to `/settings/agent` returned HTTP 200, the complete At Attin app shell, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and the restrictive Permissions Policy.
+- The selected in-app browser reached the private Sites **Continue with ChatGPT** gate but did not hold a ChatGPT web session, so deployed-origin DOM interaction was not claimed. The identical commit/archive was exercised through the local selected-browser journeys and the emitted-Worker integration test; the production HTTP path was checked with Sites' owner bypass credential.
