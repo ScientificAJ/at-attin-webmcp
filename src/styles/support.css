@@ -1,0 +1,106 @@
+.support-page__intro {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.support-grid {
+  display: grid;
+  align-items: start;
+  gap: clamp(2rem, 4vw, 4rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.support-panel,
+.support-case-form,
+.case-list,
+.help-list {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.support-panel {
+  display: grid;
+  min-height: 26rem;
+  align-content: space-between;
+  gap: 2rem;
+}
+
+.support-panel > svg,
+.support-case-form > svg {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: var(--signal);
+}
+
+.support-panel h2,
+.support-case-form h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 380;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.support-panel div > p:last-child {
+  color: rgba(244, 240, 232, 0.64);
+  line-height: 1.55;
+}
+
+.support-case-form {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.support-case-form > p {
+  color: var(--muted);
+}
+
+.case-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-list li {
+  display: grid;
+  min-height: 4.75rem;
+  padding: 0.7rem 0;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.case-list li > span:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.case-list small {
+  color: var(--muted);
+}
+
+.help-list details {
+  border-bottom: 1px solid var(--rule);
+}
+
+.help-list summary {
+  min-height: 4rem;
+  padding: 1.2rem 0;
+  cursor: pointer;
+  font-weight: 550;
+}
+
+.help-list details p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.support-page > .action-review {
+  max-width: 42rem;
+  margin: 3rem auto 0;
+}
+
+@media (max-width: 820px) {
+  .support-grid {
+    grid-template-columns: 1fr;
+  }
+}

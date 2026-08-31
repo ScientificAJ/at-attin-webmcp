@@ -1,10 +1,20 @@
+import {
+  ArrowRight,
+  ChartLineUp,
+  TrendDown,
+  TrendUp,
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { useAppServices, useBankState } from '../app/routes';
+import { Amount } from '../components/Amount';
 import { DeclarativeToolForm } from '../components/DeclarativeToolForm';
+import { ReportBars } from '../components/ReportBars';
 import { formatATC } from '../domain/money';
 import {
   selectSpendingSummary,
   selectStatement,
+  selectCashFlow,
+  selectIncomeSummary,
 } from '../domain/selectors';
 
 function stringArg(args: Record<string, unknown>, name: string): string {
@@ -17,19 +27,28 @@ export function ReportsPage() {
   const state = useBankState();
   const { toolBridge } = useAppServices();
   const unlocked = state.user.preferences.agentAccessUnlocked;
+  const spending = selectSpendingSummary(state);
+  const cashFlow = selectCashFlow(state);
+  const income = selectIncomeSummary(state);
   const accountOptions = state.accounts.map((account) => ({
     value: account.id,
     label: account.name,
   }));
 
   return (
-    <section className="tool-page" aria-labelledby="reports-title">
-      <header className="tool-page__intro">
+    <section className="tool-page reports-page" aria-labelledby="reports-title">
+      <header className="tool-page__intro reports-page__intro">
         <p className="eyebrow">Reports</p>
         <h1 id="reports-title">Reports</h1>
-        <p>Choose explicit periods for statements and local spending comparisons.</p>
-        <Link className="inline-link" to="/reports/plan">Open monthly plan</Link>
+        <p>See where fictional ATC moved, without visual clutter.</p>
+        <Link className="quiet-link" to="/reports/plan">Open monthly plan <ArrowRight aria-hidden="true" /></Link>
       </header>
+      <section className="report-metrics" aria-label="Report summary">
+        <article><TrendDown aria-hidden="true" /><span>Spent</span><Amount value={spending.totalSpent} /></article>
+        <article><TrendUp aria-hidden="true" /><span>Income</span><Amount value={income.totalIncome} /></article>
+        <article><ChartLineUp aria-hidden="true" /><span>Net cash flow</span><Amount sign="auto" value={cashFlow.net} /></article>
+      </section>
+      <ReportBars items={spending.byCategory.map(({ category, amount }) => ({ label: category, value: amount }))} title="Spending by category" />
       <div className="tool-page__forms">
         <DeclarativeToolForm
           bridge={toolBridge}

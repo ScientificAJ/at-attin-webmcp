@@ -202,6 +202,12 @@ describe('At Attin application shell', () => {
       'href',
       '/settings/agent',
     );
+
+    fireEvent.click(within(disclosure!).getByRole('link', {
+      name: 'Safety & Agent',
+      hidden: true,
+    }));
+    expect(disclosure).not.toHaveAttribute('open');
   });
 
   it('shows fictional-funds and all shell-level WebMCP availability states', async () => {

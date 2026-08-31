@@ -1,0 +1,197 @@
+.cards-page__intro {
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.cards-page__layout {
+  display: grid;
+  align-items: start;
+  gap: clamp(2rem, 5vw, 5rem);
+  grid-template-columns: minmax(17rem, 0.55fr) minmax(0, 1.45fr);
+}
+
+.card-rail {
+  display: grid;
+}
+
+.card-rail > button {
+  display: grid;
+  min-height: 6.5rem;
+  padding: 1rem 0.75rem;
+  align-items: center;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: transparent;
+  cursor: pointer;
+  gap: 0.85rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  text-align: left;
+}
+
+.card-rail > button:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.card-rail > button.is-selected {
+  border-left: 0.35rem solid var(--signal);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.card-rail > button > svg {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.62rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+}
+
+.card-rail button > span:nth-child(2) {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.card-rail small {
+  color: var(--muted);
+}
+
+.card-controls {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.card-summary {
+  display: flex;
+  min-height: 15rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.card-summary h2 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 350;
+  letter-spacing: 0.04em;
+}
+
+.card-summary > div:last-child {
+  display: grid;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.card-summary > div:last-child > span:first-child,
+.card-summary p {
+  color: rgba(244, 240, 232, 0.6);
+}
+
+.card-summary .money {
+  font-size: 1.5rem;
+}
+
+.control-list {
+  border-top: 1px solid var(--rule-strong);
+}
+
+.card-control-row {
+  display: grid;
+  min-height: 5.5rem;
+  padding: 0.75rem 0;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+  gap: 1rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto auto;
+}
+
+.card-control-row > svg {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.65rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+}
+
+.card-control-row > span:nth-child(2) {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.card-control-row small {
+  color: var(--muted);
+}
+
+.card-control-row > button {
+  min-width: 8rem;
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.card-control-row--danger > svg,
+.card-control-row--danger > button {
+  color: #a4210e;
+}
+
+.limit-form {
+  display: flex;
+  padding: 1rem 0;
+  align-items: end;
+  border-bottom: 1px solid var(--rule);
+  gap: 1rem;
+}
+
+.limit-form label {
+  display: grid;
+  flex: 1;
+  gap: 0.35rem;
+}
+
+.limit-form input {
+  min-height: 3rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  background: transparent;
+}
+
+.pin-reveal {
+  display: grid;
+  margin: 0;
+  padding: 1.5rem;
+  border: 1px solid var(--signal);
+  gap: 0.35rem;
+}
+
+.pin-reveal strong {
+  font-size: 3rem;
+  letter-spacing: 0.18em;
+}
+
+.pin-reveal small {
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .cards-page__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .card-control-row {
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  }
+
+  .card-control-row > button {
+    grid-column: 2 / -1;
+  }
+
+  .card-summary {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .card-summary > div:last-child {
+    text-align: left;
+  }
+}

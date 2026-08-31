@@ -1,0 +1,243 @@
+.accounts-page {
+  display: grid;
+  min-height: calc(100vh - 13rem);
+  align-items: start;
+  gap: clamp(3rem, 6vw, 6.5rem);
+  grid-template-columns: minmax(0, 1.2fr) minmax(24rem, 0.8fr);
+}
+
+.accounts-page__overview > header h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 5vw, 4.5rem);
+  font-weight: 370;
+  letter-spacing: -0.06em;
+}
+
+.accounts-total {
+  margin: 1.5rem 0 0;
+  font-size: clamp(4.75rem, 10vw, 8.75rem);
+  font-weight: 330;
+  letter-spacing: -0.08em;
+  line-height: 0.88;
+}
+
+.accounts-page__overview .quiet-link {
+  margin-top: 1rem;
+}
+
+.account-rail {
+  display: grid;
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+
+.account-rail > button {
+  position: relative;
+  display: grid;
+  min-height: 7.75rem;
+  padding: 1rem 1.25rem;
+  align-items: center;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: transparent;
+  cursor: pointer;
+  gap: 1rem;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  text-align: left;
+}
+
+.account-rail > button:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.account-rail > button::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.35rem;
+  background: var(--signal);
+  content: '';
+  opacity: 0;
+}
+
+.account-rail > button.is-selected {
+  border: 1px solid var(--rule);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.account-rail > button.is-selected::before {
+  opacity: 1;
+}
+
+.account-rail > button > svg {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0.8rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+}
+
+.account-rail button > span:nth-child(2) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.account-rail strong {
+  font-size: 1.12rem;
+  font-weight: 550;
+}
+
+.account-rail small {
+  color: var(--muted);
+}
+
+.account-rail .money {
+  font-size: 1.25rem;
+}
+
+.account-detail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  min-height: 44rem;
+  padding: clamp(1.6rem, 3.2vw, 2.75rem);
+  gap: 1.5rem;
+}
+
+.account-detail header h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3rem);
+  font-weight: 390;
+  letter-spacing: -0.045em;
+}
+
+.account-detail header > p:last-child {
+  color: rgba(244, 240, 232, 0.58);
+}
+
+.account-detail__balance {
+  display: grid;
+  padding: 1.5rem 0;
+  border-top: 1px solid rgba(244, 240, 232, 0.22);
+  border-bottom: 1px solid rgba(244, 240, 232, 0.22);
+  gap: 0.6rem;
+}
+
+.account-detail__balance > span:first-child {
+  color: rgba(244, 240, 232, 0.6);
+}
+
+.account-detail__balance .money {
+  font-size: clamp(3rem, 5vw, 5rem);
+  font-weight: 340;
+  letter-spacing: -0.065em;
+}
+
+.account-facts {
+  display: grid;
+  margin: 0;
+  gap: 0.7rem;
+}
+
+.account-facts > div,
+.settings-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.account-facts dt {
+  color: rgba(244, 240, 232, 0.58);
+}
+
+.account-facts dd,
+.settings-facts dd {
+  margin: 0;
+  text-align: right;
+  text-transform: capitalize;
+}
+
+.account-ledger ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-ledger .transaction-row > button {
+  min-height: 4.5rem;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+}
+
+.account-ledger .transaction-row svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.account-detail__actions {
+  display: grid;
+  align-self: end;
+  gap: 0.75rem;
+}
+
+.account-detail__statement,
+.receipt-simulation {
+  display: flex;
+  margin: 0;
+  padding: 0.85rem 0;
+  align-items: center;
+  border-top: 1px solid rgba(244, 240, 232, 0.2);
+  border-bottom: 1px solid rgba(244, 240, 232, 0.2);
+  gap: 0.65rem;
+  font-size: 0.84rem;
+}
+
+.receipt-simulation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.receipt-simulation div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.receipt-simulation span {
+  color: rgba(244, 240, 232, 0.58);
+}
+
+.receipt-simulation button {
+  min-height: 44px;
+  grid-column: 2;
+  border: 0;
+  background: transparent;
+  color: var(--signal);
+  cursor: pointer;
+  justify-self: start;
+}
+
+@media (max-width: 1000px) {
+  .accounts-page {
+    grid-template-columns: 1fr;
+  }
+
+  .account-detail {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .account-rail > button {
+    min-height: 6rem;
+    padding-inline: 0.65rem;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+
+  .account-rail > button > svg {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .account-rail .money {
+    grid-column: 2;
+  }
+}

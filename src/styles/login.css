@@ -1,0 +1,49 @@
+.login-page {
+  grid-template-columns: minmax(0, 1.3fr) minmax(25rem, 0.7fr);
+}
+
+.login-intro {
+  min-height: 100vh;
+}
+
+.login-welcome {
+  position: relative;
+  padding-bottom: 8rem;
+}
+
+.login-welcome h1 {
+  max-width: 12ch;
+  font-size: clamp(5rem, 9vw, 9rem);
+  font-weight: 340;
+}
+
+.login-panel {
+  min-height: 100vh;
+  gap: 2rem;
+}
+
+.login-panel > header h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.75rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-intro,
+  .login-panel {
+    min-height: auto;
+  }
+
+  .login-intro {
+    min-height: 55vh;
+  }
+
+  .login-welcome {
+    padding: 5rem 0 2rem;
+  }
+}

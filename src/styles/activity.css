@@ -1,0 +1,92 @@
+.activity-page__layout {
+  display: grid;
+  align-items: start;
+  gap: clamp(2rem, 4vw, 4rem);
+  grid-template-columns: minmax(18rem, 0.7fr) minmax(22rem, 1.15fr) minmax(20rem, 0.85fr);
+}
+
+.activity-results {
+  min-width: 0;
+}
+
+.activity-results .activity-list li {
+  display: block;
+  min-height: 0;
+}
+
+.transaction-detail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  padding: clamp(1.4rem, 2.5vw, 2.25rem);
+  gap: 1.25rem;
+}
+
+.transaction-detail h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  font-weight: 390;
+  letter-spacing: -0.04em;
+}
+
+.transaction-detail__amount {
+  margin: 0.7rem 0 0;
+  color: var(--signal);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: -0.05em;
+}
+
+.transaction-detail dl {
+  display: grid;
+  margin: 0;
+}
+
+.transaction-detail dl > div {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(244, 240, 232, 0.18);
+  gap: 1rem;
+}
+
+.transaction-detail dt {
+  color: rgba(244, 240, 232, 0.58);
+}
+
+.transaction-detail dd {
+  margin: 0;
+  text-align: right;
+}
+
+.transaction-detail .compact-form label > svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  color: var(--signal);
+}
+
+.tool-page > .action-review {
+  max-width: 42rem;
+  margin: 3rem auto 0;
+}
+
+@media (max-width: 1180px) {
+  .activity-page__layout {
+    grid-template-columns: minmax(18rem, 0.75fr) minmax(22rem, 1.25fr);
+  }
+
+  .transaction-detail {
+    position: static;
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .activity-page__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-detail {
+    grid-column: auto;
+  }
+}

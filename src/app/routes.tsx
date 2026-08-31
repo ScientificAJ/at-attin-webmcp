@@ -19,10 +19,15 @@ import type { BankState } from '../domain/models';
 import type { BankStore } from '../domain/store';
 import { HomePage } from '../pages/HomePage';
 import { ActivityPage } from '../pages/ActivityPage';
+import { AccountsPage } from '../pages/AccountsPage';
+import { CardsPage } from '../pages/CardsPage';
 import { LoginPage } from '../pages/LoginPage';
+import { PaymentsPage } from '../pages/PaymentsPage';
+import { PlanPage } from '../pages/PlanPage';
 import { ReportsPage } from '../pages/ReportsPage';
-import { SectionIndexPage } from '../pages/SectionIndexPage';
+import { SafetyAgentPage } from '../pages/SafetyAgentPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { SupportPage } from '../pages/SupportPage';
 import type { ToolBridge } from '../webmcp/bridge';
 import type { ConfirmationCoordinator } from '../webmcp/confirmation';
 import type { TrustPredicate } from '../webmcp/contracts';
@@ -105,38 +110,9 @@ export function AppRouteTree({ services }: AppRouteTreeProps) {
         <Route element={<ProtectedRoute />}>
           <Route element={<BankShell />}>
             <Route index element={<HomePage />} />
-            <Route
-              path="accounts"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Accounts"
-                  title="Your accounts"
-                  description="Review every fictional ATC balance, transaction, statement, and linked card."
-                  links={[{ label: 'Cards', to: '/accounts/cards' }]}
-                />
-              )}
-            />
-            <Route
-              path="accounts/cards"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Accounts"
-                  title="Cards"
-                  description="Manage card status, limits, payment controls, travel mode, and replacement."
-                  links={[{ label: 'Back to accounts', to: '/accounts' }]}
-                />
-              )}
-            />
-            <Route
-              path="payments"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Payments"
-                  title="Payments"
-                  description="Pay trusted people, move ATC, and review scheduled or recurring payments."
-                />
-              )}
-            />
+            <Route path="accounts" element={<AccountsPage />} />
+            <Route path="accounts/cards" element={<CardsPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
             <Route
               path="activity"
               element={<ActivityPage />}
@@ -145,43 +121,13 @@ export function AppRouteTree({ services }: AppRouteTreeProps) {
               path="reports"
               element={<ReportsPage />}
             />
-            <Route
-              path="reports/plan"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Reports"
-                  title="Plan"
-                  description="Shape monthly budgets and savings goals around upcoming fictional payments."
-                  links={[{ label: 'Back to reports', to: '/reports' }]}
-                />
-              )}
-            />
+            <Route path="reports/plan" element={<PlanPage />} />
             <Route
               path="settings"
               element={<SettingsPage />}
             />
-            <Route
-              path="settings/support"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Settings"
-                  title="Support"
-                  description="Open local support cases and find plain-language help for fictional banking."
-                  links={[{ label: 'Back to settings', to: '/settings' }]}
-                />
-              )}
-            />
-            <Route
-              path="settings/agent"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Settings"
-                  title="Safety & Agent"
-                  description="The agent can prepare anything. Only you can approve it."
-                  links={[{ label: 'Back to settings', to: '/settings' }]}
-                />
-              )}
-            />
+            <Route path="settings/support" element={<SupportPage />} />
+            <Route path="settings/agent" element={<SafetyAgentPage />} />
             <Route path="cards" element={<Navigate to="/accounts/cards" replace />} />
             <Route path="plan" element={<Navigate to="/reports/plan" replace />} />
             <Route path="support" element={<Navigate to="/settings/support" replace />} />

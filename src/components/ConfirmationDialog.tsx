@@ -6,6 +6,7 @@ import {
   type MouseEvent,
 } from 'react';
 import type { ConfirmationCoordinator } from '../webmcp/confirmation';
+import { OperationDetails } from './OperationDetails';
 
 export interface ConfirmationDialogProps {
   coordinator: ConfirmationCoordinator;
@@ -101,22 +102,10 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
           </p>
         </header>
 
-        {snapshot.disclosure.length > 0 ? (
-          <section aria-labelledby="confirmation-disclosure-title">
-            <h3 id="confirmation-disclosure-title">Information to disclose</h3>
-            <ul>
-              {snapshot.disclosure.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </section>
-        ) : null}
-        {snapshot.consequences.length > 0 ? (
-          <section aria-labelledby="confirmation-consequences-title">
-            <h3 id="confirmation-consequences-title">What will happen</h3>
-            <ul>
-              {snapshot.consequences.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </section>
-        ) : null}
+        <OperationDetails
+          consequences={snapshot.consequences}
+          disclosure={snapshot.disclosure}
+        />
 
         <p className="confirmation-dialog__expiry">
           This confirmation expires after 90 seconds and cannot be reused.

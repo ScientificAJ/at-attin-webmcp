@@ -60,7 +60,11 @@ export function PrimaryNav() {
         <div className="primary-nav__more-sheet">
           <strong>More banking destinations</strong>
           {MORE_DESTINATIONS.map(({ label, to, icon: MoreIcon }) => (
-            <NavLink key={to} to={to}>
+            <NavLink
+              key={to}
+              onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+              to={to}
+            >
               <MoreIcon aria-hidden="true" weight="regular" />
               <span>{label}</span>
             </NavLink>

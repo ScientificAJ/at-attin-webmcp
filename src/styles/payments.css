@@ -1,0 +1,238 @@
+.payments-page {
+  display: grid;
+  min-height: calc(100vh - 13rem);
+  align-items: start;
+  gap: clamp(3rem, 6vw, 7rem);
+  grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
+}
+
+.payments-page__left {
+  min-width: 0;
+}
+
+.payments-page__left > .action-review {
+  margin-top: 2rem;
+}
+
+.rail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rail-heading h2,
+.schedule-timeline h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  font-weight: 450;
+}
+
+.rail-add {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--signal-dark);
+  cursor: pointer;
+  gap: 0.45rem;
+}
+
+.rail-add svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0.35rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.payee-rail {
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+
+.payee-rail > div[role='list'] {
+  margin-top: 1rem;
+}
+
+.payee-rail > div[role='list'] > button {
+  display: grid;
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  cursor: pointer;
+  gap: 0.9rem;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  text-align: left;
+}
+
+.payee-rail button.is-selected {
+  color: var(--signal-dark);
+}
+
+.payee-initials {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  place-items: center;
+}
+
+.payee-rail button.is-selected .payee-initials {
+  border-color: var(--signal);
+}
+
+.payee-rail button > span:last-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.payee-rail strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 520;
+}
+
+.payee-rail small {
+  color: var(--muted);
+}
+
+.schedule-timeline {
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+
+.schedule-timeline ol {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-timeline li {
+  display: grid;
+  min-height: 4.75rem;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+  gap: 0.8rem;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+}
+
+.timeline-mark {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+}
+
+.schedule-timeline li:first-child .timeline-mark {
+  border: 3px solid var(--signal);
+}
+
+.schedule-timeline li > span:nth-child(2) {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.schedule-timeline small,
+.schedule-timeline time {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.payment-composer {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  min-height: 43rem;
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  gap: 1.5rem;
+}
+
+.payment-composer header h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3.5vw, 3.25rem);
+  font-weight: 390;
+  letter-spacing: -0.045em;
+}
+
+.payment-composer header > p:last-child {
+  color: rgba(244, 240, 232, 0.56);
+}
+
+.segmented-control {
+  display: grid;
+  border-top: 1px solid rgba(244, 240, 232, 0.2);
+  border-bottom: 1px solid rgba(244, 240, 232, 0.2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmented-control button {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: rgba(244, 240, 232, 0.62);
+  cursor: pointer;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+}
+
+.segmented-control button[aria-pressed='true'] {
+  color: var(--signal);
+}
+
+.payment-utilities {
+  display: grid;
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.payment-utilities details,
+.utility-action {
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+}
+
+.payment-utilities summary,
+.utility-action {
+  display: flex;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.payment-utilities .compact-form {
+  padding: 1rem 0 1.5rem;
+}
+
+@media (max-width: 1000px) {
+  .payments-page {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-composer {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .schedule-timeline li {
+    padding: 0.75rem 0;
+    grid-template-columns: 1.2rem minmax(0, 1fr) auto;
+  }
+
+  .schedule-timeline .money {
+    grid-column: 2;
+  }
+}

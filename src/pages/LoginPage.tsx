@@ -48,9 +48,8 @@ export function LoginPage() {
     <main className="login-page">
       <section className="login-intro" aria-labelledby="login-title">
         <p className="wordmark">At Attin</p>
-        <div>
-          <p className="eyebrow">Welcome back</p>
-          <h1 id="login-title">Banking, made direct.</h1>
+        <div className="login-welcome">
+          <h1 id="login-title">Welcome back</h1>
           <p className="login-lede">Banking, with you in control.</p>
           <p>Fictional funds. Real safeguards.</p>
         </div>
@@ -60,6 +59,11 @@ export function LoginPage() {
         </p>
       </section>
       <section className="login-panel" aria-label="Prototype sign in">
+        <header>
+          <p className="eyebrow">Private prototype</p>
+          <h2>Banking, made direct.</h2>
+          <p>Sign in to At Attin</p>
+        </header>
         <form onSubmit={submit}>
           <label htmlFor="username">Username</label>
           <input
@@ -91,7 +95,7 @@ export function LoginPage() {
             <span>{DEMO_USERNAME} / {DEMO_PASSWORD}</span>
           </div>
         </div>
-        <p className="fictional-disclosure">ATC is fictional and has no cash value.</p>
+        <p className="fictional-disclosure">No real money is used. ATC is fictional and has no cash value.</p>
       </section>
     </main>
   );

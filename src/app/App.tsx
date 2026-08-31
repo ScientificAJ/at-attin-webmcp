@@ -13,6 +13,18 @@ import '../styles/global.css';
 import '../styles/shell.css';
 import '../styles/forms.css';
 import '../styles/confirmation.css';
+import '../styles/product.css';
+import '../styles/login.css';
+import '../styles/home.css';
+import '../styles/accounts.css';
+import '../styles/payments.css';
+import '../styles/activity.css';
+import '../styles/cards.css';
+import '../styles/reports.css';
+import '../styles/plan.css';
+import '../styles/settings.css';
+import '../styles/safety-agent.css';
+import '../styles/support.css';
 import { AppRouteTree, type AppServices } from './routes';
 
 function supportsWebMcp(): boolean {
