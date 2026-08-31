@@ -1,6 +1,8 @@
 import {
   createContext,
+  useEffect,
   useContext,
+  useRef,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
@@ -16,13 +18,24 @@ import { BankShell } from '../components/BankShell';
 import type { BankState } from '../domain/models';
 import type { BankStore } from '../domain/store';
 import { HomePage } from '../pages/HomePage';
+import { ActivityPage } from '../pages/ActivityPage';
 import { LoginPage } from '../pages/LoginPage';
+import { ReportsPage } from '../pages/ReportsPage';
 import { SectionIndexPage } from '../pages/SectionIndexPage';
+import { SettingsPage } from '../pages/SettingsPage';
+import type { ToolBridge } from '../webmcp/bridge';
+import type { ConfirmationCoordinator } from '../webmcp/confirmation';
+import type { TrustPredicate } from '../webmcp/contracts';
+import type { ToolRegistry } from '../webmcp/registry';
 
 export interface AppServices {
   session: SessionStore;
   bankStore: BankStore;
   webMcpAvailable: boolean;
+  confirmationCoordinator: ConfirmationCoordinator;
+  toolBridge: ToolBridge;
+  toolRegistry: ToolRegistry;
+  trustPredicate: TrustPredicate;
 }
 
 const ServicesContext = createContext<AppServices | null>(null);
@@ -62,6 +75,22 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
+function WebMcpRuntimeBoundary() {
+  const { toolBridge, toolRegistry } = useAppServices();
+  const location = useLocation();
+  const previousLocation = useRef(location.key);
+
+  useEffect(() => {
+    if (previousLocation.current !== location.key) {
+      toolBridge.cancel('navigation');
+      previousLocation.current = location.key;
+    }
+  }, [location.key, toolBridge]);
+
+  useEffect(() => () => toolRegistry.dispose(), [toolRegistry]);
+  return null;
+}
+
 interface AppRouteTreeProps {
   services: AppServices;
   children?: ReactNode;
@@ -70,6 +99,7 @@ interface AppRouteTreeProps {
 export function AppRouteTree({ services }: AppRouteTreeProps) {
   return (
     <ServicesContext.Provider value={services}>
+      <WebMcpRuntimeBoundary />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
@@ -109,24 +139,11 @@ export function AppRouteTree({ services }: AppRouteTreeProps) {
             />
             <Route
               path="activity"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Activity"
-                  title="Activity"
-                  description="Search transaction history, update categories, add notes, and open disputes."
-                />
-              )}
+              element={<ActivityPage />}
             />
             <Route
               path="reports"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Reports"
-                  title="Reports"
-                  description="Understand spending, income, cash flow, budgets, subscriptions, and savings."
-                  links={[{ label: 'Plan', to: '/reports/plan' }]}
-                />
-              )}
+              element={<ReportsPage />}
             />
             <Route
               path="reports/plan"
@@ -141,17 +158,7 @@ export function AppRouteTree({ services }: AppRouteTreeProps) {
             />
             <Route
               path="settings"
-              element={(
-                <SectionIndexPage
-                  eyebrow="Settings"
-                  title="Settings"
-                  description="Control alerts, accessibility, support, trusted contacts, and agent safety."
-                  links={[
-                    { label: 'Support', to: '/settings/support' },
-                    { label: 'Safety & Agent', to: '/settings/agent' },
-                  ]}
-                />
-              )}
+              element={<SettingsPage />}
             />
             <Route
               path="settings/support"

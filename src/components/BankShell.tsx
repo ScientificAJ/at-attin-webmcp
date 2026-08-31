@@ -11,6 +11,7 @@ import {
   useBankState,
 } from '../app/routes';
 import { AgentStatus } from './AgentStatus';
+import { ConfirmationDialog } from './ConfirmationDialog';
 import { PrimaryNav } from './PrimaryNav';
 
 const MORE_LINKS = [
@@ -21,7 +22,13 @@ const MORE_LINKS = [
 ];
 
 export function BankShell() {
-  const { session, webMcpAvailable } = useAppServices();
+  const {
+    bankStore,
+    confirmationCoordinator,
+    session,
+    toolRegistry,
+    webMcpAvailable,
+  } = useAppServices();
   const state = useBankState();
   const { accessibility, agentAccessUnlocked } = state.user.preferences;
 
@@ -34,6 +41,33 @@ export function BankShell() {
       root.style.removeProperty('font-size');
     };
   }, [accessibility.largeText]);
+
+  useEffect(() => {
+    void toolRegistry.sync({
+      signedIn: session.isSignedIn(),
+      agentUnlocked: agentAccessUnlocked,
+    });
+  }, [agentAccessUnlocked, session, toolRegistry]);
+
+  const signOut = () => {
+    void toolRegistry.sync({ signedIn: false, agentUnlocked: false });
+    if (agentAccessUnlocked) {
+      const version = bankStore.getState().stateVersion;
+      bankStore.transact(version, `logout-agent-lock-${version}`, (draft) => {
+        draft.user.preferences.agentAccessUnlocked = false;
+        draft.audit.push({
+          id: `audit-logout-agent-lock-${version}`,
+          actor: 'user',
+          eventType: 'agent_access_locked',
+          target: 'agent-access',
+          outcome: 'success',
+          timestamp: new Date().toISOString(),
+          safeDetail: 'Agent Access locked on logout.',
+        });
+      });
+    }
+    session.signOut();
+  };
 
   return (
     <div
@@ -50,7 +84,7 @@ export function BankShell() {
       </header>
       <div className="bank-status-bar" role="status">
         <span>Fictional funds · No cash value</span>
-        <button className="text-button" type="button" onClick={() => session.signOut()}>
+        <button className="text-button" type="button" onClick={signOut}>
           Sign out
         </button>
       </div>
@@ -73,6 +107,7 @@ export function BankShell() {
         </nav>
         <p>ATC is fictional, device-local, and has no cash value.</p>
       </footer>
+      <ConfirmationDialog coordinator={confirmationCoordinator} />
     </div>
   );
 }

@@ -3,6 +3,16 @@ import { MemoryRouter } from 'react-router-dom';
 import { createSessionStore, type SessionStore } from '../auth/session';
 import { AppRouteTree, type AppServices } from '../app/routes';
 import { createBankStore, type BankStore } from '../domain/store';
+import { ToolBridge } from '../webmcp/bridge';
+import {
+  ConfirmationCoordinator,
+  hasTrustedUserActivation,
+} from '../webmcp/confirmation';
+import type {
+  ModelContext,
+  TrustPredicate,
+} from '../webmcp/contracts';
+import { ToolRegistry } from '../webmcp/registry';
 import { memoryStorage } from './memory-storage';
 
 const fixedClock = () => new Date('2026-08-31T09:00:00Z');
@@ -13,6 +23,8 @@ export interface RenderRouterOptions {
   agentUnlocked?: boolean;
   session?: SessionStore;
   store?: BankStore;
+  modelContext?: ModelContext;
+  trustPredicate?: TrustPredicate;
 }
 
 export interface RenderAppResult extends RenderResult {
@@ -35,10 +47,24 @@ export function renderRouter(
       draft.user.preferences.agentAccessUnlocked = true;
     });
   }
+  const trustPredicate = options.trustPredicate ?? hasTrustedUserActivation;
+  const confirmationCoordinator = new ConfirmationCoordinator({
+    clock: fixedClock,
+    trustPredicate,
+  });
+  const toolBridge = new ToolBridge(store, confirmationCoordinator, { clock: fixedClock });
+  const toolRegistry = new ToolRegistry({
+    bridge: toolBridge,
+    getModelContext: () => options.modelContext,
+  });
   const services: AppServices = {
     session,
     bankStore: store,
     webMcpAvailable: options.webMcpAvailable ?? false,
+    confirmationCoordinator,
+    toolBridge,
+    toolRegistry,
+    trustPredicate,
   };
   const view = render(
     <MemoryRouter initialEntries={[path]}>

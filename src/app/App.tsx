@@ -2,13 +2,22 @@ import { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { createSessionStore, type SessionStore } from '../auth/session';
 import { createBankStore, type BankStore } from '../domain/store';
+import { ToolBridge } from '../webmcp/bridge';
+import {
+  ConfirmationCoordinator,
+  hasTrustedUserActivation,
+} from '../webmcp/confirmation';
+import { ToolRegistry } from '../webmcp/registry';
 import '../styles/tokens.css';
 import '../styles/global.css';
 import '../styles/shell.css';
+import '../styles/forms.css';
+import '../styles/confirmation.css';
 import { AppRouteTree, type AppServices } from './routes';
 
 function supportsWebMcp(): boolean {
-  return typeof document !== 'undefined' && 'modelContext' in document;
+  return typeof document !== 'undefined'
+    && typeof document.modelContext?.registerTool === 'function';
 }
 
 function createDeferredBankStore(session: SessionStore): BankStore {
@@ -47,10 +56,18 @@ function createDeferredBankStore(session: SessionStore): BankStore {
 export function App() {
   const [services] = useState<AppServices>(() => {
     const session = createSessionStore();
+    const bankStore = createDeferredBankStore(session);
+    const confirmationCoordinator = new ConfirmationCoordinator();
+    const toolBridge = new ToolBridge(bankStore, confirmationCoordinator);
+    const toolRegistry = new ToolRegistry({ bridge: toolBridge });
     return {
       session,
-      bankStore: createDeferredBankStore(session),
+      bankStore,
       webMcpAvailable: supportsWebMcp(),
+      confirmationCoordinator,
+      toolBridge,
+      toolRegistry,
+      trustPredicate: hasTrustedUserActivation,
     };
   });
 

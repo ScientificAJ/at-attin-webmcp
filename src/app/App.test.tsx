@@ -2,6 +2,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,6 +16,7 @@ import {
   BANK_STORAGE_KEY,
 } from '../domain/storage';
 import { memoryStorage } from '../test/memory-storage';
+import { ModelContextFake } from '../test/model-context-fake';
 import {
   renderAuthenticated,
   renderRouter,
@@ -39,6 +41,25 @@ describe('At Attin application shell', () => {
     expect(screen.getByText('john.attin / attin2026')).toBeVisible();
     expect(screen.getByText(/prototype-only demo credentials/i)).toBeVisible();
     expect(screen.getByText(/ATC is fictional and has no cash value/i)).toBeVisible();
+  });
+
+  it('treats a present but unusable model context as unavailable', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(document, 'modelContext');
+    Object.defineProperty(document, 'modelContext', {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      const view = render(<App />);
+      expect(await screen.findByText('WebMCP unavailable')).toBeVisible();
+      view.unmount();
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(document, 'modelContext', descriptor);
+      } else {
+        Reflect.deleteProperty(document, 'modelContext');
+      }
+    }
   });
 
   it('redirects every signed-out banking route to login', async () => {
@@ -205,5 +226,111 @@ describe('At Attin application shell', () => {
 
     expect(await screen.findByRole('heading', { name: /banking, made direct/i })).toBeVisible();
     expect(session.isSignedIn()).toBe(false);
+  });
+
+  it('keeps exactly four declarative forms visible and annotates them only while unlocked', () => {
+    const lockedActivity = renderAuthenticated('/activity', { webMcpAvailable: true });
+    const activityForm = screen.getByRole('form', { name: 'Filter activity' });
+    expect(activityForm).toBeVisible();
+    expect(activityForm).not.toHaveAttribute('toolname');
+    lockedActivity.unmount();
+
+    const reports = renderAuthenticated('/reports', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+    });
+    expect(screen.getByRole('form', { name: 'Choose statement period' })).toHaveAttribute(
+      'toolname',
+      'choose_statement_period',
+    );
+    expect(screen.getByRole('form', { name: 'Compare report periods' })).toHaveAttribute(
+      'toolname',
+      'compare_report_periods',
+    );
+    reports.unmount();
+
+    const settings = renderAuthenticated('/settings', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+    });
+    expect(screen.getByRole('form', { name: 'Filter agent audit' })).toHaveAttribute(
+      'toolname',
+      'filter_agent_audit',
+    );
+    expect(document.querySelectorAll('[toolname]')).toHaveLength(1);
+    expect(document.querySelector('[toolautosubmit]')).toBeNull();
+    settings.unmount();
+  });
+
+  it('unlocks Agent Access only from trusted human UI and immediately registers 56 tools', async () => {
+    const user = userEvent.setup();
+    const modelContext = new ModelContextFake();
+    const view = renderAuthenticated('/settings', {
+      webMcpAvailable: true,
+      modelContext,
+      trustPredicate: () => true,
+    });
+
+    expect(modelContext.tools.size).toBe(0);
+    await user.click(screen.getByRole('button', { name: 'Unlock Agent Access' }));
+    await waitFor(() => expect(modelContext.tools.size).toBe(56));
+    expect(view.store.getState().user.preferences.agentAccessUnlocked).toBe(true);
+    expect(screen.getByText('WebMCP connected')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Lock Agent Access' }));
+    await waitFor(() => expect(modelContext.tools.size).toBe(0));
+    expect(view.store.getState().user.preferences.agentAccessUnlocked).toBe(false);
+  });
+
+  it('rejects synthetic Agent Access activation without changing or registering state', async () => {
+    const user = userEvent.setup();
+    const modelContext = new ModelContextFake();
+    const view = renderAuthenticated('/settings', {
+      webMcpAvailable: true,
+      modelContext,
+      trustPredicate: () => false,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Unlock Agent Access' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('trusted-user-activation-required');
+    expect(view.store.getState().user.preferences.agentAccessUnlocked).toBe(false);
+    expect(modelContext.tools.size).toBe(0);
+  });
+
+  it('cancels a pending disclosure on navigation and logout', async () => {
+    const user = userEvent.setup();
+    const navigation = renderAuthenticated('/', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+      trustPredicate: () => true,
+    });
+    const pendingNavigation = navigation.services.toolBridge.run(
+      'get_overview',
+      {},
+      new AbortController().signal,
+    );
+    const navigationCancelled = expect(pendingNavigation).rejects.toThrow(
+      'confirmation-navigation',
+    );
+    expect(await screen.findByRole('dialog')).toBeVisible();
+    await user.click(screen.getByRole('link', { name: 'Accounts' }));
+    await navigationCancelled;
+    navigation.unmount();
+
+    const logout = renderAuthenticated('/', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+      trustPredicate: () => true,
+    });
+    const pendingLogout = logout.services.toolBridge.run(
+      'get_overview',
+      {},
+      new AbortController().signal,
+    );
+    const logoutCancelled = expect(pendingLogout).rejects.toThrow('confirmation-logout');
+    expect(await screen.findByRole('dialog')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    await logoutCancelled;
+    expect(logout.session.isSignedIn()).toBe(false);
   });
 });

@@ -1,0 +1,172 @@
+.tool-page {
+  max-width: 78rem;
+}
+
+.tool-page__intro {
+  max-width: 52rem;
+  margin-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+
+.tool-page__intro h1 {
+  margin: 0;
+  font-size: clamp(4rem, 10vw, 9rem);
+  font-weight: 380;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+
+.tool-page__intro > p:last-of-type {
+  max-width: 42rem;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  line-height: 1.6;
+}
+
+.tool-page__grid,
+.tool-page__forms {
+  display: grid;
+  align-items: start;
+  gap: clamp(2rem, 5vw, 5rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tool-page__list {
+  min-width: 0;
+}
+
+.activity-list__mark {
+  width: 0.65rem;
+  height: 0.65rem;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.declarative-tool-form {
+  display: grid;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid var(--rule-strong);
+  background: color-mix(in srgb, var(--canvas) 92%, white);
+  gap: 1.25rem;
+}
+
+.declarative-tool-form__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.declarative-tool-form__heading h2,
+.agent-access-panel h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-weight: 430;
+  letter-spacing: -0.035em;
+}
+
+.declarative-tool-form__heading span {
+  color: var(--signal-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.declarative-tool-form > p,
+.agent-access-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.declarative-tool-form__fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.declarative-tool-form__field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.declarative-tool-form__field label {
+  font-weight: 620;
+}
+
+.declarative-tool-form__field input,
+.declarative-tool-form__field select {
+  min-height: 3rem;
+  padding: 0.55rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.declarative-tool-form__field > span {
+  color: var(--muted);
+  font-size: 0.77rem;
+  line-height: 1.4;
+}
+
+.declarative-tool-form__submit,
+.agent-access-panel button {
+  min-height: 3.5rem;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 0.35rem;
+  background: var(--obsidian);
+  color: var(--canvas);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+.declarative-tool-form__submit:hover,
+.agent-access-panel button:hover {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+.declarative-tool-form__status {
+  min-height: 1.5em;
+  color: var(--ink) !important;
+  font-size: 0.86rem;
+}
+
+.agent-access-panel {
+  display: grid;
+  margin-bottom: 2.5rem;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  align-items: center;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.agent-access-panel > p[role] {
+  grid-column: 1 / -1;
+}
+
+.inline-link,
+.inline-links a {
+  color: var(--signal-dark);
+  text-underline-offset: 0.25em;
+}
+
+.inline-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+@media (max-width: 760px) {
+  .tool-page__grid,
+  .tool-page__forms,
+  .agent-access-panel {
+    grid-template-columns: 1fr;
+  }
+}
