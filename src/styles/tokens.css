@@ -1,0 +1,17 @@
+:root {
+  --canvas: #f4f0e8;
+  --canvas-deep: #ece6db;
+  --ink: #11110f;
+  --muted: #6f6b64;
+  --signal: #f04424;
+  --signal-dark: #c92f17;
+  --obsidian: #141412;
+  --rule: rgba(17, 17, 15, 0.16);
+  --rule-strong: rgba(17, 17, 15, 0.34);
+  --focus-ring: 0 0 0 3px var(--canvas), 0 0 0 5px var(--signal);
+  --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --header-height: 5.75rem;
+  --motion-fast: 160ms;
+  --motion-calm: 220ms;
+  --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
