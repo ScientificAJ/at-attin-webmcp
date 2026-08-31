@@ -73,3 +73,6 @@ The user clarified that the hackathon prototype must contain a functional agent 
 - Critical actions now require both uppercase `YES` and a fresh single-digit addition answer before the confirmation button enables; the coordinator validates both again before creating its single-use authorization.
 - Manual and agent paths use the same critical-friction rule. Focus trapping, cancellation, expiry, trusted activation, stale-state, and replay protections remain unchanged.
 - The Sites access policy is intentionally public for hackathon judging, removing the outer **Continue with ChatGPT** gate. At Attin's own visible `john.attin` / `attin2026` prototype login remains the only route to the complete banking UI.
+- The final amendment passed 141/141 tests across 12 files, lint, a 4,759-module production build, and the Sites Worker contract before publication.
+- Sites version 5 deployed commit `9ed708fa9fed033b2ead4770662fc62c162df7a7` successfully with environment revision 1. The live access policy reports `public`, one owner record, zero groups, and zero external visitors.
+- Unauthenticated production verification returned the redirect-only root without a ChatGPT gate, then returned the complete app shell from `/login` for a browser-equivalent request with HTTP 200 and all required security headers.

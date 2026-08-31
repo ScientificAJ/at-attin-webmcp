@@ -64,10 +64,10 @@ One low-severity deployment weakness was validated before release: the new trust
 
 ## Deployment proof
 
-- Sites version 4 saved from commit `00a276a5919d02fd99040e3cf36d16cc5627d891` with the locally built archive and deployed successfully to production.
-- Access remained private and owner-only: one allowed user, zero groups, and zero external visitors.
+- Sites version 5 saved from commit `9ed708fa9fed033b2ead4770662fc62c162df7a7` with the locally built archive and deployed successfully to production.
+- Access is intentionally public for hackathon judging: the outer **Continue with ChatGPT** gate is absent, while the owner record remains the sole allowed user with zero groups and zero external visitors.
 - Environment revision 1 was applied to the deployment with a hidden `FEATHERLESS_API_KEY` secret and `FEATHERLESS_MODEL=moonshotai/Kimi-K3`.
 - An authenticated production `POST /api/agent` probe asked for an account overview with no bank state in the request. The live Featherless response identified `moonshotai/Kimi-K3` and selected the allowlisted `get_overview` WebMCP tool.
-- An authenticated root request returned only the intentional `/login` redirect document.
-- An authenticated direct request to `/settings/agent` returned HTTP 200, the complete At Attin app shell, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and the restrictive Permissions Policy.
-- The selected in-app browser reached the private Sites **Continue with ChatGPT** gate but did not hold a ChatGPT web session, so deployed-origin DOM interaction was not claimed. The exact UI was exercised through local selected-browser journeys; the production Worker, Featherless request, model identity, and tool selection were verified at the deployed origin with the existing owner bypass credential.
+- An unauthenticated production root request returned HTTP 200 with only the intentional `/login` redirect document and no ChatGPT sign-in gate.
+- A browser-equivalent unauthenticated request to `/login` returned HTTP 200, the complete At Attin app shell, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and the restrictive Permissions Policy.
+- The visible At Attin login uses the documented single-user judge credentials `john.attin` / `attin2026`; automated route coverage proves those credentials unlock the complete protected banking UI.
