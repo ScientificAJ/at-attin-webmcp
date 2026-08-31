@@ -23,11 +23,13 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
   const typedRef = useRef<HTMLInputElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const [typedValue, setTypedValue] = useState('');
+  const [mathValue, setMathValue] = useState('');
   const [error, setError] = useState('');
   const actionId = snapshot.status === 'pending' ? snapshot.actionId : '';
 
   useEffect(() => {
     setTypedValue('');
+    setMathValue('');
     setError('');
     if (snapshot.status !== 'pending') return;
     restoreFocusRef.current = document.activeElement instanceof HTMLElement
@@ -75,11 +77,20 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
   const approve = (event: MouseEvent<HTMLButtonElement>) => {
     setError('');
     try {
-      coordinator.approve(event.nativeEvent, typedValue || undefined);
+      coordinator.approve(
+        event.nativeEvent,
+        typedValue || undefined,
+        mathValue === '' ? undefined : Number(mathValue),
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Confirmation was rejected.');
     }
   };
+  const expectedMathAnswer = snapshot.mathChallenge
+    ? snapshot.mathChallenge.left + snapshot.mathChallenge.right
+    : null;
+  const criticalReady = !snapshot.requiresTypedConfirmation
+    || (typedValue === 'YES' && Number(mathValue) === expectedMathAnswer);
 
   return (
     <div className="confirmation-backdrop">
@@ -113,7 +124,7 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
 
         {snapshot.requiresTypedConfirmation ? (
           <div className="confirmation-dialog__typed">
-            <p>Type YES to confirm this critical action.</p>
+            <p>Type YES and solve the math check to confirm this critical action.</p>
             <label htmlFor="critical-confirmation">Type YES to confirm</label>
             <input
               autoComplete="off"
@@ -124,6 +135,21 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
               spellCheck={false}
               value={typedValue}
             />
+            {snapshot.mathChallenge ? (
+              <label htmlFor="critical-math-confirmation">
+                What is {snapshot.mathChallenge.left} + {snapshot.mathChallenge.right}?
+                <input
+                  aria-label={`What is ${snapshot.mathChallenge.left} + ${snapshot.mathChallenge.right}?`}
+                  autoComplete="off"
+                  id="critical-math-confirmation"
+                  inputMode="numeric"
+                  maxLength={2}
+                  onChange={(event) => setMathValue(event.currentTarget.value)}
+                  pattern="[0-9]*"
+                  value={mathValue}
+                />
+              </label>
+            ) : null}
           </div>
         ) : null}
 
@@ -132,7 +158,7 @@ export function ConfirmationDialog({ coordinator }: ConfirmationDialogProps) {
         <div className="confirmation-dialog__actions">
           <button
             className="confirmation-dialog__confirm"
-            disabled={snapshot.requiresTypedConfirmation && typedValue !== 'YES'}
+            disabled={!criticalReady}
             onClick={approve}
             ref={confirmRef}
             type="button"

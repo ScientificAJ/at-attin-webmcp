@@ -64,7 +64,7 @@ flowchart LR
 
 The grant is created only after a trusted active user event. It expires after 90 seconds, is single-use, and is consumed synchronously against the prepared operation. Reads and mutations use the same boundary.
 
-Critical actions—PIN reveal, lost/replacement cards, dispute initiation, suspicious-charge protection, and trusted-contact removal—also require typed uppercase `YES`. Lowercase or programmatic approval is rejected.
+Critical actions—PIN reveal, lost/replacement cards, dispute initiation, suspicious-charge protection, and trusted-contact removal—also require typed uppercase `YES` plus the correct answer to a fresh single-digit addition check. Lowercase text, an absent or wrong answer, and programmatic approval are rejected while the prepared task remains pending.
 
 ## Fail-closed cases
 

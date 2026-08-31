@@ -60,7 +60,7 @@ export function LoginPage() {
       </section>
       <section className="login-panel" aria-label="Prototype sign in">
         <header>
-          <p className="eyebrow">Private prototype</p>
+          <p className="eyebrow">Judge-ready prototype</p>
           <h2>Banking, made direct.</h2>
           <p>Sign in to At Attin</p>
         </header>

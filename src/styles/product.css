@@ -313,6 +313,13 @@
 
 .action-review__typed {
   display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-review__typed label {
+  display: grid;
+  align-content: start;
   gap: 0.45rem;
 }
 
@@ -325,6 +332,12 @@
   color: var(--canvas);
   font-size: 1.65rem;
   letter-spacing: 0.2em;
+}
+
+@media (max-width: 520px) {
+  .action-review__typed {
+    grid-template-columns: 1fr;
+  }
 }
 
 .action-review__status {

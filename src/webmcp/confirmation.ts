@@ -4,6 +4,11 @@ import type {
   ConfirmationCancelReason,
   TrustPredicate,
 } from './contracts';
+import {
+  createMathChallenge,
+  mathChallengeAnswer,
+  type MathChallenge,
+} from '../security/math-challenge';
 
 const CONFIRMATION_LIFETIME_MS = 90_000;
 
@@ -15,6 +20,7 @@ export interface PendingConfirmationSnapshot {
   risk: ConfirmableAction['risk'];
   readOnly: boolean;
   requiresTypedConfirmation: boolean;
+  mathChallenge: MathChallenge | null;
   disclosure: string[];
   consequences: string[];
   expectedVersion: number;
@@ -34,6 +40,7 @@ interface PendingConfirmation {
   timer: ReturnType<typeof setTimeout>;
   resolve: (result: OperationCommitResult) => void;
   reject: (error: Error) => void;
+  mathChallenge: MathChallenge | null;
 }
 
 interface AuthorizationGrant {
@@ -46,6 +53,7 @@ interface AuthorizationGrant {
 export interface ConfirmationCoordinatorOptions {
   clock?: () => Date;
   trustPredicate?: TrustPredicate;
+  mathChallengeFactory?: () => MathChallenge;
 }
 
 function stableSerialize(value: unknown): string {
@@ -96,6 +104,7 @@ export function hasTrustedUserActivation(event: Event): boolean {
 export class ConfirmationCoordinator {
   private readonly clock: () => Date;
   private readonly trustPredicate: TrustPredicate;
+  private readonly mathChallengeFactory: () => MathChallenge;
   private readonly listeners = new Set<() => void>();
   private pending: PendingConfirmation | null = null;
   private snapshot: ConfirmationSnapshot = { status: 'idle' };
@@ -104,6 +113,7 @@ export class ConfirmationCoordinator {
   constructor(options: ConfirmationCoordinatorOptions = {}) {
     this.clock = options.clock ?? (() => new Date());
     this.trustPredicate = options.trustPredicate ?? hasTrustedUserActivation;
+    this.mathChallengeFactory = options.mathChallengeFactory ?? createMathChallenge;
   }
 
   getSnapshot = (): ConfirmationSnapshot => this.snapshot;
@@ -132,6 +142,9 @@ export class ConfirmationCoordinator {
       expectedVersion: prepared.expectedVersion,
       idempotencyKey: prepared.idempotencyKey,
     });
+    const mathChallenge = prepared.requiresTypedConfirmation
+      ? this.mathChallengeFactory()
+      : null;
 
     return new Promise<OperationCommitResult>((resolve, reject) => {
       const abortListener = () => this.cancel('aborted');
@@ -145,6 +158,7 @@ export class ConfirmationCoordinator {
         timer,
         resolve,
         reject,
+        mathChallenge,
       };
       signal.addEventListener('abort', abortListener, { once: true });
       this.snapshot = {
@@ -155,6 +169,7 @@ export class ConfirmationCoordinator {
         risk: prepared.risk,
         readOnly: prepared.readOnly,
         requiresTypedConfirmation: prepared.requiresTypedConfirmation,
+        mathChallenge,
         disclosure: [...prepared.disclosure],
         consequences: [...prepared.consequences],
         expectedVersion: prepared.expectedVersion,
@@ -164,7 +179,7 @@ export class ConfirmationCoordinator {
     });
   }
 
-  approve(event: Event, typedValue?: string): void {
+  approve(event: Event, typedValue?: string, mathAnswer?: number): void {
     const pending = this.pending;
     if (!pending) throw new Error('no-pending-confirmation');
     if (!this.trustPredicate(event)) {
@@ -172,6 +187,10 @@ export class ConfirmationCoordinator {
     }
     if (pending.prepared.requiresTypedConfirmation && typedValue !== 'YES') {
       throw new Error('type-YES-to-confirm');
+    }
+    if (pending.mathChallenge
+      && mathAnswer !== mathChallengeAnswer(pending.mathChallenge)) {
+      throw new Error('solve-math-challenge-to-confirm');
     }
     if (this.clock().getTime() >= pending.expiresAtMs) {
       this.cancel('expired');

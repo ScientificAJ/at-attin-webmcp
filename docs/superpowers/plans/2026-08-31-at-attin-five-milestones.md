@@ -18,7 +18,7 @@
 - Exactly 60 meaningful WebMCP surfaces are discoverable after login and while Agent Access is unlocked: 56 imperative tools and four declarative tools.
 - Every agent read and mutation pauses on an At Attin-owned confirmation surface before protected data returns or state commits.
 - No WebMCP tool can approve a pending action, unlock Agent Access, or reuse approval.
-- Confirmation requires event.isTrusted plus active user activation; critical security actions also require typed uppercase YES.
+- Confirmation requires event.isTrusted plus active user activation; the approved judge-flow amendment also requires typed uppercase YES and a fresh addition check for critical security actions.
 - Tools remain same-origin, register through one AbortController, unregister on logout/lock/teardown, and propagate callback cancellation.
 - Tool names stay below 30 characters, descriptions below 500, parameter descriptions below 150, and output below 1.5K characters.
 - Protected free-form output sets untrustedContentHint; every pure read tool sets readOnlyHint.
@@ -270,7 +270,7 @@ Expected: FAIL because the catalogue, coordinator, bridge, and registry are abse
 
 - [ ] **Step 3: Implement prepare-confirm-commit authorization**
 
-Allow one pending task. Bind a single-use approval token to action digest and state version. Expire at 90 seconds and on navigation, logout, lock, AbortSignal, or teardown. Require production event.isTrusted plus active user activation; require uppercase YES for critical actions. Reject programmatic click, replay, duplicate, stale preview, and self-approval. Reads disclose only after approval.
+Allow one pending task. Bind a single-use approval token to action digest and state version. Expire at 90 seconds and on navigation, logout, lock, AbortSignal, or teardown. Require production event.isTrusted plus active user activation; require uppercase YES and the displayed addition answer for critical actions. Reject programmatic click, replay, duplicate, stale preview, and self-approval. Reads disclose only after approval.
 
 - [ ] **Step 4: Implement native lifecycle and schemas**
 
@@ -497,4 +497,4 @@ README includes value, screenshots, credentials, browser setup, local commands, 
 
 - [ ] **Step 7: Final review and Sites deployment**
 
-Run the broad strongest-model code review over the complete branch. Fix and re-review any Critical or Important finding. Hand the exact validated Product Design project to Sites hosting, publish privately when available, poll to success, open the deployed URL, sign in, verify direct routing, and repeat one read plus one mutation on the deployed origin.
+Run the broad strongest-model code review over the complete branch. Fix and re-review any Critical or Important finding. Hand the exact validated Product Design project to Sites hosting, publish with the user-approved judge access level, poll to success, open the deployed URL, sign in, verify direct routing, and repeat one read plus one mutation on the deployed origin.

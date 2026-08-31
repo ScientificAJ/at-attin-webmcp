@@ -77,16 +77,21 @@
 .confirmation-dialog__typed {
   display: grid;
   margin: 1.25rem 0;
-  gap: 0.5rem;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .confirmation-dialog__typed p {
+  grid-column: 1 / -1;
   margin: 0 0 0.25rem;
   color: var(--signal-dark);
   font-weight: 700;
 }
 
 .confirmation-dialog__typed label {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
   font-size: 0.84rem;
   font-weight: 650;
 }
@@ -138,7 +143,12 @@
 }
 
 @media (max-width: 520px) {
+  .confirmation-dialog__typed,
   .confirmation-dialog__actions {
     grid-template-columns: 1fr;
+  }
+
+  .confirmation-dialog__typed p {
+    grid-column: auto;
   }
 }

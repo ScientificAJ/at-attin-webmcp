@@ -2,7 +2,7 @@
 
 At Attin exposes exactly **60 WebMCP surfaces** while the single user is signed in and Agent Access is unlocked: **56 imperative tools** shared by the in-site Featherless agent and native `document.modelContext.registerTool(...)`, plus **four declarative form tools**. There is no deterministic intent parser or model-only execution path.
 
-Every surface uses a closed, bounded schema and pauses on an At Attin-owned confirmation before protected data is returned or fictional banking state changes. `Yes` below means the visible **Yes, confirm** control. `Typed YES` means the user must first type uppercase `YES`, then activate that control with a trusted human gesture.
+Every surface uses a closed, bounded schema and pauses on an At Attin-owned confirmation before protected data is returned or fictional banking state changes. `Yes` below means the visible **Yes, confirm** control. `Typed YES` means the user must type uppercase `YES`, solve the displayed single-digit addition check, then activate that control with a trusted human gesture.
 
 Money inputs are integer ATC minor units. Identifiers are stable fictional IDs. Optional inputs are marked `?`.
 

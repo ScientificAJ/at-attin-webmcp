@@ -66,3 +66,10 @@ The user clarified that the hackathon prototype must contain a functional agent 
 - Added the agent UI and Worker tests first. The initial focused runs failed because the runtime, component, and Worker endpoint did not exist; the implemented focused slices then passed.
 - Final pre-publication verification passed: 11 files and 140/140 tests, lint with no findings, a 4,758-module production build, and the Sites Worker contract.
 - Sites version 4 deployed commit `00a276a5919d02fd99040e3cf36d16cc5627d891` privately with environment revision 1. A live authenticated production probe reached `moonshotai/Kimi-K3`, which selected the allowlisted `get_overview` WebMCP tool from a request containing no bank state.
+
+## Approved judge-access and confirmation amendment
+
+- Ordinary reads and changes retain the visible At Attin popup with direct **Yes, confirm** and **No, cancel** controls.
+- Critical actions now require both uppercase `YES` and a fresh single-digit addition answer before the confirmation button enables; the coordinator validates both again before creating its single-use authorization.
+- Manual and agent paths use the same critical-friction rule. Focus trapping, cancellation, expiry, trusted activation, stale-state, and replay protections remain unchanged.
+- The Sites access policy is intentionally public for hackathon judging, removing the outer **Continue with ChatGPT** gate. At Attin's own visible `john.attin` / `attin2026` prototype login remains the only route to the complete banking UI.

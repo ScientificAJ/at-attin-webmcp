@@ -12,7 +12,11 @@ export function approveTrusted(
   coordinator: ConfirmationCoordinator,
   typedValue?: string,
 ): void {
-  coordinator.approve(trustedActivation(), typedValue);
+  const snapshot = coordinator.getSnapshot();
+  const mathAnswer = snapshot.status === 'pending' && snapshot.mathChallenge
+    ? snapshot.mathChallenge.left + snapshot.mathChallenge.right
+    : undefined;
+  coordinator.approve(trustedActivation(), typedValue, mathAnswer);
 }
 
 export async function promiseSettled(promise: Promise<unknown>): Promise<boolean> {

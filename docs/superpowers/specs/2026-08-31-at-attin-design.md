@@ -308,7 +308,7 @@ For read-only tasks, the confirmation sheet states what information will be disc
 - Confirmation expires after 90 seconds or on navigation, logout, lock or tool cancellation.
 - A changed balance or state version invalidates the preview and requires a new confirmation.
 - High-impact tasks show account, amount, payee, date, fees, reversibility and resulting balance.
-- Sensitive security tasks require the user to type `YES` in addition to selecting **Yes, confirm**.
+- Sensitive security tasks require the user to type `YES`, solve a fresh single-digit addition check, and then select **Yes, confirm**.
 - **No, cancel** is always visible, keyboard accessible and never visually hidden.
 - The confirm handler rejects programmatic `.click()` calls and events without trusted user activation; confirmation has no tool, URL, form-auto-submit or keyboard-shortcut bypass.
 - Tool cancellation propagates through the WebMCP `AbortSignal` and records a cancelled audit event.

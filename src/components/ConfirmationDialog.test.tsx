@@ -30,7 +30,7 @@ describe('ConfirmationDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('requires exact uppercase YES in the visible dialog for critical operations', async () => {
+  it('requires uppercase YES and the visible math challenge for critical operations', async () => {
     const user = userEvent.setup();
     const { bridge, coordinator } = createWebMcpTestHarness({
       trustPredicate: () => true,
@@ -41,14 +41,23 @@ describe('ConfirmationDialog', () => {
     }, new AbortController().signal);
     render(<ConfirmationDialog coordinator={coordinator} />);
 
-    expect(screen.getByText('Type YES to confirm this critical action.')).toBeVisible();
+    expect(screen.getByText(/Type YES and solve the math check/i)).toBeVisible();
     const typed = screen.getByLabelText('Type YES to confirm');
+    const math = screen.getByLabelText(/What is \d+ \+ \d+\?/);
+    const challenge = math.getAttribute('aria-label')?.match(/What is (\d+) \+ (\d+)\?/);
+    if (!challenge) throw new Error('Math challenge was not exposed accessibly.');
+    const answer = Number(challenge[1]) + Number(challenge[2]);
     const confirm = screen.getByRole('button', { name: 'Yes, confirm' });
     expect(confirm).toBeDisabled();
     await user.type(typed, 'yes');
     expect(confirm).toBeDisabled();
     await user.clear(typed);
     await user.type(typed, 'YES');
+    expect(confirm).toBeDisabled();
+    await user.type(math, String(answer + 1));
+    expect(confirm).toBeDisabled();
+    await user.clear(math);
+    await user.type(math, String(answer));
     expect(confirm).toBeEnabled();
 
     await user.click(confirm);

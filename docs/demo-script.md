@@ -42,7 +42,7 @@ Ask:
 
 > Secure the suspicious card charge: freeze the linked card and open a dispute.
 
-At the critical confirmation, type lowercase `yes` and show that it is rejected. Then type uppercase `YES` and confirm.
+At the critical confirmation, type lowercase `yes` and show that it remains blocked. Then type uppercase `YES`, deliberately try a wrong math answer, solve the displayed addition check, and confirm.
 
 “This is one atomic safeguard: the card freezes and the dispute opens together, or neither happens. The authorization is trusted, version-bound, expiring, and single-use.”
 

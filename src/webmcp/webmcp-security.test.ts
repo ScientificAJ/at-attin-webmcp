@@ -161,6 +161,13 @@ function untrustedEvent(): Event {
   return { isTrusted: false } as Event;
 }
 
+function pendingMathAnswer(coordinator: ConfirmationCoordinator): number | undefined {
+  const snapshot = coordinator.getSnapshot();
+  return snapshot.status === 'pending' && snapshot.mathChallenge
+    ? snapshot.mathChallenge.left + snapshot.mathChallenge.right
+    : undefined;
+}
+
 async function promiseSettled(promise: Promise<unknown>): Promise<boolean> {
   const marker = Symbol('pending');
   return Promise.race([
@@ -285,6 +292,9 @@ describe('secured native WebMCP catalogue', () => {
       coordinator.approve(
         trustedEvent(),
         pending.status === 'pending' && pending.requiresTypedConfirmation ? 'YES' : undefined,
+        pending.status === 'pending' && pending.mathChallenge
+          ? pending.mathChallenge.left + pending.mathChallenge.right
+          : undefined,
       );
       const output = await promise;
       expect(output, operation).toContain('"status":"completed"');
@@ -392,7 +402,14 @@ describe('confirmation authorization boundary', () => {
     expect(() => coordinator.approve(trustedEvent(), 'yes')).toThrow(
       'type-YES-to-confirm',
     );
-    coordinator.approve(trustedEvent(), 'YES');
+    expect(() => coordinator.approve(trustedEvent(), 'YES')).toThrow(
+      'solve-math-challenge-to-confirm',
+    );
+    const mathAnswer = pendingMathAnswer(coordinator);
+    expect(() => coordinator.approve(trustedEvent(), 'YES', Number(mathAnswer) + 1)).toThrow(
+      'solve-math-challenge-to-confirm',
+    );
+    coordinator.approve(trustedEvent(), 'YES', mathAnswer);
     await expect(promise).rejects.toThrow('operation-invalid');
   });
 
@@ -527,14 +544,21 @@ describe('confirmation authorization boundary', () => {
       reason: 'card-not-present',
     }, new AbortController().signal);
 
-    expect(() => coordinator.approve(untrustedEvent(), 'YES')).toThrow(
+    expect(() => coordinator.approve(
+      untrustedEvent(),
+      'YES',
+      pendingMathAnswer(coordinator),
+    )).toThrow(
       'trusted-user-activation-required',
     );
     expect(() => coordinator.approve(trustedEvent(), 'yes')).toThrow(
       'type-YES-to-confirm',
     );
     expect(coordinator.getSnapshot().status).toBe('pending');
-    coordinator.approve(trustedEvent(), 'YES');
+    expect(() => coordinator.approve(trustedEvent(), 'YES')).toThrow(
+      'solve-math-challenge-to-confirm',
+    );
+    coordinator.approve(trustedEvent(), 'YES', pendingMathAnswer(coordinator));
     await expect(critical).resolves.toContain('"status":"completed"');
   });
 

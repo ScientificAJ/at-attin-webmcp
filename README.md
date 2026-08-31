@@ -9,7 +9,7 @@ ATC is fictional, device-local money with no cash value. There are no real payme
 ## Try the prototype
 
 - Deployed demo: [https://at-attin.astronebulae.chatgpt.site](https://at-attin.astronebulae.chatgpt.site)
-- Access: private owner-only Sites release; select **Continue with ChatGPT** if prompted.
+- Access: public judge URL; At Attin's own prototype login is the only sign-in gate.
 - Username: `john.attin`
 - Password: `attin2026`
 
@@ -48,7 +48,7 @@ Every agent request—including every read—stops at an At Attin-owned confirma
 1. Validate closed, bounded arguments.
 2. Prepare an exact disclosure or consequence preview without mutating state.
 3. Bind one pending authorization to the operation digest and current state version.
-4. Require a trusted, active human gesture on **Yes, confirm**. Critical actions also require typed uppercase `YES`.
+4. Require a trusted, active human gesture on **Yes, confirm**. Critical actions also require typed uppercase `YES` and the answer to a fresh single-digit addition check.
 5. Commit once, atomically; reject expiry, abort, cancellation, replay, duplicate, stale state, or invalid persistence.
 6. Record a separate device-local agent audit outcome without making a read mutate banking state.
 7. Serve the deployed UI with anti-framing and restrictive browser security headers so trusted confirmation clicks remain visible and app-owned.
@@ -63,7 +63,7 @@ Sign in, unlock Agent Access, open **Ask At Attin**, and try:
 2. “Create a monthly 1,250 ATC payment to Orbit Works starting September 1, but keep at least 5,000 ATC in Daily Account.”
 3. “Secure the suspicious card charge: freeze the linked card and open a dispute.”
 
-Each prompt must pause inside At Attin. Cancel one request, approve one normal request, and type lowercase `yes` before uppercase `YES` on the critical flow to see the safeguards.
+Each prompt must pause inside At Attin. Cancel one request, approve one normal request, and try lowercase `yes` or a wrong sum before entering uppercase `YES` plus the correct math answer on the critical flow.
 
 ## Run locally
 

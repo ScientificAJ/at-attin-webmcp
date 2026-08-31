@@ -13,12 +13,12 @@ Production URL: [https://at-attin.astronebulae.chatgpt.site](https://at-attin.as
 | Gate | Result |
 |---|---|
 | Integrated WebMCP hero and rejection evaluations | 5/5 passed |
-| Complete unit and integration suite | 140/140 passed across 11 files |
+| Complete unit and integration suite | 141/141 passed across 12 files |
 | ESLint | Passed with no findings |
-| TypeScript and production build | Passed; 4,758 modules transformed and all Sites artifacts emitted |
+| TypeScript and production build | Passed; 4,759 modules transformed and all Sites artifacts emitted |
 | Sites Worker contract | Passed, including Featherless proxy, allowlist, routing, and security-header checks |
 
-The WebMCP evaluation suite proves a confirmed spending read with no banking-state mutation, the exact monthly 1,250 ATC Orbit Works recurrence with a persisted 5,000 ATC floor, atomic suspicious-charge protection with typed uppercase `YES`, closed-schema rejection without protected output, and fail-closed untrusted activation, abort, and stale-state behavior.
+The WebMCP evaluation suite proves a confirmed spending read with no banking-state mutation, the exact monthly 1,250 ATC Orbit Works recurrence with a persisted 5,000 ATC floor, atomic suspicious-charge protection with typed uppercase `YES` plus a math check, closed-schema rejection without protected output, and fail-closed untrusted activation, abort, and stale-state behavior.
 
 ## Embedded Featherless agent proof
 
@@ -35,7 +35,7 @@ The WebMCP evaluation suite proves a confirmed spending read with no banking-sta
 - Production registration path: native `document.modelContext.registerTool(tool, { signal })`.
 - Lifecycle: nothing registers while signed out or locked; lock, logout, teardown, and partial registration failure abort the owning generation.
 - Authorization: every read and mutation waits on the app-owned confirmation coordinator.
-- Critical actions: trusted activation plus uppercase `YES`.
+- Critical actions: trusted activation plus uppercase `YES` and the correct displayed addition answer.
 - Output: compact JSON below 1,500 characters; protected free-form reads carry `untrustedContentHint`.
 - `ModelContextFake` is test-only. The shipped in-site agent is a real Featherless model client over the production WebMCP descriptors, not a deterministic execution engine.
 
