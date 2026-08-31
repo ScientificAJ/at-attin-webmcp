@@ -130,3 +130,26 @@ Results:
 ## Concerns
 
 No blocking concerns. `test:e2e` is intentionally a script-only foundation in Task 1; Playwright specs arrive in later tasks. The npm lockfile deletion is deliberate and approved so dependency state cannot drift between two package managers.
+
+## Fix round 1/5 — Consolidated Milestone 1 test contract
+
+Changed `src/app/App.test.tsx` to match the consolidated brief exactly:
+
+- Renamed the test to `renders the At Attin product heading`.
+- Replaced the case-insensitive regular expression with the exact accessible-name matcher `name: 'At Attin'`.
+
+Exact covering test file: `src/app/App.test.tsx`
+
+Command:
+
+```text
+/home/john/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm test src/app/App.test.tsx
+```
+
+Passing output:
+
+```text
+Test Files  1 passed (1)
+Tests       1 passed (1)
+Duration    2.04s
+```

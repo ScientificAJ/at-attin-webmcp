@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { App } from './App';
 
-it('renders the At Attin product name', () => {
+it('renders the At Attin product heading', () => {
   render(<App />);
-  expect(screen.getByRole('heading', { name: /at attin/i })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'At Attin' })).toBeVisible();
 });
