@@ -152,6 +152,7 @@ export function createSeedState(now = new Date()): BankState {
         sourceAccountId: 'account-daily',
         payeeId: 'payee-orbit',
         amount: atc(420),
+        balanceFloor: atc(0),
         date: '2026-09-15T09:00:00.000Z',
         recurrence: null,
         status: 'scheduled',
@@ -162,6 +163,7 @@ export function createSeedState(now = new Date()): BankState {
         sourceAccountId: 'account-daily',
         payeeId: 'payee-northstar',
         amount: atc(165),
+        balanceFloor: atc(0),
         date: '2026-09-05T09:00:00.000Z',
         recurrence: {
           frequency: 'monthly',
@@ -176,6 +178,7 @@ export function createSeedState(now = new Date()): BankState {
         sourceAccountId: 'account-daily',
         payeeId: 'payee-orbit',
         amount: atc(95),
+        balanceFloor: atc(0),
         date: '2026-09-21T09:00:00.000Z',
         recurrence: {
           frequency: 'monthly',
@@ -190,6 +193,7 @@ export function createSeedState(now = new Date()): BankState {
         sourceAccountId: 'account-daily',
         payeeId: 'payee-foundry',
         amount: atc(80),
+        balanceFloor: atc(0),
         date: isoAt(1, 8, 0),
         recurrence: null,
         status: 'failed',

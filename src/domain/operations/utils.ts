@@ -44,10 +44,24 @@ export function optionalString(
     throw new Error(`${name} must be text`);
   }
   const normalized = value.trim();
+  if (normalized === '') {
+    return undefined;
+  }
   if (normalized.length > maximumLength) {
     throw new Error(`${name} must be ${maximumLength} characters or fewer`);
   }
   return normalized;
+}
+
+export function optionalNonEmptyString(
+  args: Record<string, unknown>,
+  name: string,
+  maximumLength = 120,
+): string | undefined {
+  if (args[name] === undefined || args[name] === null) {
+    return undefined;
+  }
+  return requiredString(args, name, maximumLength);
 }
 
 export function requiredBoolean(args: Record<string, unknown>, name: string): boolean {
@@ -103,11 +117,22 @@ export function requiredDate(
   now?: Date,
 ): string {
   const value = requiredString(args, name, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)
+    || Number.isNaN(parsed.getTime())
+    || parsed.toISOString().slice(0, 10) !== value) {
     throw new Error(`${name} must use YYYY-MM-DD`);
   }
   if (now && value < now.toISOString().slice(0, 10)) {
     throw new Error(`${name} must not be in the past`);
+  }
+  return value;
+}
+
+export function requiredMonth(args: Record<string, unknown>, name: string): string {
+  const value = requiredString(args, name, 7);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    throw new Error(`${name} must use YYYY-MM`);
   }
   return value;
 }
@@ -184,13 +209,31 @@ export function floorAfter(
   account: Account,
   amount: MinorATC,
   requestedFloor?: MinorATC,
+  reservedFloor: MinorATC = 0 as MinorATC,
 ): { after: MinorATC; floor: MinorATC } {
-  const floor = requestedFloor ?? account.balanceFloor;
+  const floor = Math.max(
+    account.balanceFloor,
+    requestedFloor ?? account.balanceFloor,
+    reservedFloor,
+  ) as MinorATC;
   const after = subtractATC(account.availableBalance, amount);
   if (after < floor) {
     throw new Error(`Payment would cross your ${formatATC(floor)} balance floor`);
   }
   return { after, floor };
+}
+
+export function reservedForGoals(
+  state: Readonly<BankState>,
+  accountId: string,
+): MinorATC {
+  const reserved = state.goals
+    .filter((goal) => goal.accountId === accountId)
+    .reduce((sum, goal) => sum + goal.savedAmount, 0);
+  if (!Number.isSafeInteger(reserved)) {
+    throw new Error('Savings-goal backing exceeds safe ATC limits');
+  }
+  return reserved as MinorATC;
 }
 
 export function mutableAccount(state: BankState, id: string): Account {

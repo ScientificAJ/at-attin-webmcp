@@ -1,4 +1,5 @@
 import type { AuditEvent, BankState } from './models';
+import { parseBankState } from './schema';
 import { createSeedState } from './seed';
 import {
   createStorageAdapter,
@@ -11,6 +12,7 @@ export type BankReducer = (draft: BankState) => BankState | void;
 export type TransactionFailure =
   | { ok: false; code: 'duplicate' }
   | { ok: false; code: 'stale' }
+  | { ok: false; code: 'invalid' }
   | { ok: false; code: 'persistence' };
 
 export type TransactionSuccess = { ok: true; state: Readonly<BankState> };
@@ -58,15 +60,15 @@ export function createBankStore(
     ? storage as StorageAdapter
     : createStorageAdapter(storage as KeyValueStorage);
   const loaded = adapter.load();
-  let state = deepFreeze(
+  let state = deepFreeze(parseBankState(
     loaded.state ?? {
       ...createSeedState(clock()),
       ...(loaded.recoveryNotice ? { recoveryNotice: loaded.recoveryNotice } : {}),
     },
-  );
+  ));
   const listeners = new Set<() => void>();
 
-  if (!loaded.state) {
+  if (!loaded.state || loaded.needsSave) {
     adapter.save(state);
   }
 
@@ -95,12 +97,19 @@ export function createBankStore(
       next.stateVersion = state.stateVersion + 1;
       next.usedIdempotencyKeys = [...next.usedIdempotencyKeys, idempotencyKey];
 
+      let validated: BankState;
       try {
-        adapter.save(next);
+        validated = parseBankState(next);
+      } catch {
+        return { ok: false, code: 'invalid' };
+      }
+
+      try {
+        adapter.save(validated);
       } catch {
         return { ok: false, code: 'persistence' };
       }
-      return publish(next);
+      return publish(validated);
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -118,12 +127,13 @@ export function createBankStore(
         safeDetail: 'Canonical fictional banking state restored.',
       };
       seeded.audit.push(resetAudit);
+      const validated = parseBankState(seeded);
       try {
-        adapter.save(seeded);
+        adapter.save(validated);
       } catch {
         return { ok: false, code: 'persistence' };
       }
-      return publish(seeded);
+      return publish(validated);
     },
   };
 }

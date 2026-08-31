@@ -4,6 +4,7 @@ import {
   LockKey,
   Target,
 } from '@phosphor-icons/react';
+import { useEffect } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import {
   useAppServices,
@@ -24,6 +25,16 @@ export function BankShell() {
   const state = useBankState();
   const { accessibility, agentAccessUnlocked } = state.user.preferences;
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute('data-large-text', accessibility.largeText);
+    root.style.fontSize = accessibility.largeText ? '115%' : '';
+    return () => {
+      root.removeAttribute('data-large-text');
+      root.style.removeProperty('font-size');
+    };
+  }, [accessibility.largeText]);
+
   return (
     <div
       className="bank-shell"
@@ -31,6 +42,7 @@ export function BankShell() {
       data-large-text={accessibility.largeText || undefined}
       data-reduced-motion={accessibility.reducedMotion || undefined}
     >
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className="bank-header">
         <Link className="wordmark" to="/" aria-label="At Attin home">At Attin</Link>
         <PrimaryNav />
@@ -42,6 +54,11 @@ export function BankShell() {
           Sign out
         </button>
       </div>
+      {state.recoveryNotice ? (
+        <div className="recovery-notice" role="alert">
+          {state.recoveryNotice}
+        </div>
+      ) : null}
       <main className="bank-main" id="main-content">
         <Outlet />
       </main>

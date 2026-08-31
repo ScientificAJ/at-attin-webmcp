@@ -72,14 +72,23 @@ export interface TransactionSearch {
   limit?: number;
 }
 
-export function searchTransactions(
+function dateBoundary(value: string | undefined, endOfDay: boolean): string | undefined {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return `${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`;
+  }
+  return value;
+}
+
+function filterTransactions(
   state: Readonly<BankState>,
-  filters: TransactionSearch = {},
+  filters: TransactionSearch,
 ): Transaction[] {
   const query = filters.query?.trim().toLocaleLowerCase('en-US') ?? '';
-  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+  const from = dateBoundary(filters.from, false);
+  const to = dateBoundary(filters.to, true);
 
-  return copy(state.transactions.filter((transaction) => {
+  return state.transactions.filter((transaction) => {
     const searchable = `${transaction.merchant} ${transaction.memo} ${transaction.category}`
       .toLocaleLowerCase('en-US');
     return (!query || searchable.includes(query))
@@ -87,11 +96,19 @@ export function searchTransactions(
       && (!filters.category || transaction.category === filters.category)
       && (!filters.direction || transaction.direction === filters.direction)
       && (!filters.status || transaction.status === filters.status)
-      && (!filters.from || transaction.date >= filters.from)
-      && (!filters.to || transaction.date <= filters.to)
+      && (!from || transaction.date >= from)
+      && (!to || transaction.date <= to)
       && (filters.minimumMinor === undefined || transaction.amount >= filters.minimumMinor)
       && (filters.maximumMinor === undefined || transaction.amount <= filters.maximumMinor);
-  }).slice(0, limit));
+  });
+}
+
+export function searchTransactions(
+  state: Readonly<BankState>,
+  filters: TransactionSearch = {},
+): Transaction[] {
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+  return copy(filterTransactions(state, filters).slice(0, limit));
 }
 
 export function selectTransaction(
@@ -114,7 +131,7 @@ export function selectSpendingSummary(
   state: Readonly<BankState>,
   filters: Omit<TransactionSearch, 'direction'> = {},
 ): SpendingSummary {
-  const debits = searchTransactions(state, { ...filters, direction: 'debit' });
+  const debits = filterTransactions(state, { ...filters, direction: 'debit' });
   const categoryTotals = new Map<string, number>();
   for (const transaction of debits) {
     categoryTotals.set(
@@ -141,7 +158,7 @@ export function selectCashFlow(
   state: Readonly<BankState>,
   filters: Pick<TransactionSearch, 'accountId' | 'from' | 'to'> = {},
 ): CashFlowProjection {
-  const transactions = searchTransactions(state, { ...filters, status: 'posted', limit: 100 });
+  const transactions = filterTransactions(state, { ...filters, status: 'posted' });
   const inflow = asMinor(transactions
     .filter(({ direction }) => direction === 'credit')
     .reduce((sum, item) => sum + item.amount, 0));
@@ -155,15 +172,14 @@ export function selectIncomeSummary(
   state: Readonly<BankState>,
   filters: Pick<TransactionSearch, 'accountId' | 'from' | 'to'> = {},
 ) {
-  const credits = searchTransactions(state, {
+  const credits = filterTransactions(state, {
     ...filters,
     direction: 'credit',
     status: 'posted',
-    limit: 100,
   });
   return {
     totalIncome: asMinor(credits.reduce((sum, item) => sum + item.amount, 0)),
-    transactions: credits,
+    transactions: copy(credits),
   };
 }
 
@@ -225,6 +241,6 @@ export function selectStatement(
 ) {
   return {
     account: selectAccount(state, accountId),
-    transactions: searchTransactions(state, { accountId, from, to, limit: 100 }),
+    transactions: copy(filterTransactions(state, { accountId, from, to })),
   };
 }

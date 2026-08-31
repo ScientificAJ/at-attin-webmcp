@@ -30,6 +30,11 @@ import { preparePaymentOperation } from './payments';
 import { preparePlanningOperation } from './planning';
 import { preparePreferenceOperation } from './preferences';
 import { prepareSupportOperation } from './support';
+import {
+  requiredDate,
+  requiredMinor,
+  requiredString,
+} from './utils';
 
 export const READ_OPERATION_NAMES = [
   'get_overview',
@@ -196,17 +201,121 @@ function asArgs(args: unknown): Record<string, unknown> {
 }
 
 function stringArg(args: Record<string, unknown>, name: string): string {
-  const value = args[name];
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(`${name} is required`);
+  return requiredString(args, name, 120);
+}
+
+function assertAllowedKeys(
+  args: Record<string, unknown>,
+  allowed: readonly string[],
+): void {
+  const unknown = Object.keys(args).find((key) => !allowed.includes(key));
+  if (unknown) {
+    throw new Error(`${unknown} is not accepted by this operation`);
   }
-  return value.trim();
+}
+
+function strictStringArg(
+  args: Record<string, unknown>,
+  name: string,
+  maximumLength: number,
+): string | undefined {
+  if (args[name] === undefined) return undefined;
+  return requiredString(args, name, maximumLength);
+}
+
+function strictEnumArg<const T extends readonly string[]>(
+  args: Record<string, unknown>,
+  name: string,
+  values: T,
+): T[number] | undefined {
+  if (args[name] === undefined) return undefined;
+  const value = requiredString(args, name);
+  if (!values.includes(value)) {
+    throw new Error(`${name} is not a supported value`);
+  }
+  return value as T[number];
+}
+
+function strictLimit(args: Record<string, unknown>): number | undefined {
+  if (args.limit === undefined) return undefined;
+  if (!Number.isSafeInteger(args.limit) || (args.limit as number) < 1 || (args.limit as number) > 100) {
+    throw new Error('limit must be a safe integer from 1 to 100');
+  }
+  return args.limit as number;
+}
+
+function readDateRange(args: Record<string, unknown>) {
+  const from = args.from === undefined ? undefined : requiredDate(args, 'from');
+  const to = args.to === undefined ? undefined : requiredDate(args, 'to');
+  if (from && to && from > to) {
+    throw new Error('from must not follow to');
+  }
+  return { from, to };
+}
+
+function readTransactionFilters(
+  state: Readonly<BankState>,
+  args: Record<string, unknown>,
+  mode: 'search' | 'spending' | 'cash-flow',
+): TransactionSearch {
+  const allowed = mode === 'search'
+    ? [
+      'query', 'accountId', 'category', 'direction', 'status', 'from', 'to',
+      'minimumMinor', 'maximumMinor', 'limit',
+    ]
+    : mode === 'spending'
+      ? ['query', 'accountId', 'category', 'status', 'from', 'to', 'minimumMinor', 'maximumMinor']
+      : ['accountId', 'from', 'to'];
+  assertAllowedKeys(args, allowed);
+
+  const query = mode === 'cash-flow' ? undefined : strictStringArg(args, 'query', 120);
+  const accountId = strictStringArg(args, 'accountId', 120);
+  if (accountId && !state.accounts.some(({ id }) => id === accountId)) {
+    throw new Error('Account was not found');
+  }
+  const category = mode === 'cash-flow' ? undefined : strictStringArg(args, 'category', 50);
+  const direction = mode === 'search'
+    ? strictEnumArg(args, 'direction', ['credit', 'debit'] as const)
+    : undefined;
+  const status = mode === 'cash-flow'
+    ? undefined
+    : strictEnumArg(args, 'status', ['pending', 'posted', 'declined'] as const);
+  const { from, to } = readDateRange(args);
+  const minimumMinor = mode === 'cash-flow' || args.minimumMinor === undefined
+    ? undefined
+    : requiredMinor(args, 'minimumMinor', { allowZero: true });
+  const maximumMinor = mode === 'cash-flow' || args.maximumMinor === undefined
+    ? undefined
+    : requiredMinor(args, 'maximumMinor', { allowZero: true });
+  if (minimumMinor !== undefined
+    && maximumMinor !== undefined
+    && minimumMinor > maximumMinor) {
+    throw new Error('minimumMinor must not exceed maximumMinor');
+  }
+  const limit = mode === 'search' ? strictLimit(args) : undefined;
+  return {
+    ...(query === undefined ? {} : { query }),
+    ...(accountId === undefined ? {} : { accountId }),
+    ...(category === undefined ? {} : { category }),
+    ...(direction === undefined ? {} : { direction }),
+    ...(status === undefined ? {} : { status }),
+    ...(from === undefined ? {} : { from }),
+    ...(to === undefined ? {} : { to }),
+    ...(minimumMinor === undefined ? {} : { minimumMinor }),
+    ...(maximumMinor === undefined ? {} : { maximumMinor }),
+    ...(limit === undefined ? {} : { limit }),
+  };
+}
+
+function noReadArgs(args: Record<string, unknown>): void {
+  assertAllowedKeys(args, []);
 }
 
 function readPlan(context: OperationContext, operation: ReadOperationName): OperationPlan {
   const { state, args } = context;
   switch (operation) {
     case 'get_overview':
+      noReadArgs(args);
       return {
         title: 'Share account overview',
         risk: 'read',
@@ -215,6 +324,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectOverview(state),
       };
     case 'list_accounts':
+      noReadArgs(args);
       return {
         title: 'Share accounts',
         risk: 'read',
@@ -222,7 +332,8 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         consequences: [],
         data: selectAccounts(state),
       };
-    case 'get_account':
+    case 'get_account': {
+      assertAllowedKeys(args, ['accountId']);
       return {
         title: 'Share account detail',
         risk: 'read',
@@ -230,15 +341,19 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         consequences: [],
         data: selectAccount(state, stringArg(args, 'accountId')),
       };
-    case 'search_transactions':
+    }
+    case 'search_transactions': {
+      const filters = readTransactionFilters(state, args, 'search');
       return {
         title: 'Share matching transactions',
         risk: 'read',
         disclosure: ['Matching merchant names, amounts, categories, dates, and notes'],
         consequences: [],
-        data: searchTransactions(state, args as TransactionSearch),
+        data: searchTransactions(state, filters),
       };
+    }
     case 'get_transaction':
+      assertAllowedKeys(args, ['transactionId']);
       return {
         title: 'Share transaction detail',
         risk: 'read',
@@ -246,31 +361,38 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         consequences: [],
         data: selectTransaction(state, stringArg(args, 'transactionId')),
       };
-    case 'get_spending_summary':
+    case 'get_spending_summary': {
+      const filters = readTransactionFilters(state, args, 'spending');
       return {
         title: 'Share spending summary',
         risk: 'read',
         disclosure: ['Spending totals and category breakdown'],
         consequences: [],
-        data: selectSpendingSummary(state, args as TransactionSearch),
+        data: selectSpendingSummary(state, filters),
       };
-    case 'get_cash_flow':
+    }
+    case 'get_cash_flow': {
+      const filters = readTransactionFilters(state, args, 'cash-flow');
       return {
         title: 'Share cash flow',
         risk: 'read',
         disclosure: ['Money in, money out, and net cash flow'],
         consequences: [],
-        data: selectCashFlow(state, args as TransactionSearch),
+        data: selectCashFlow(state, filters),
       };
-    case 'get_income_summary':
+    }
+    case 'get_income_summary': {
+      const filters = readTransactionFilters(state, args, 'cash-flow');
       return {
         title: 'Share income summary',
         risk: 'read',
         disclosure: ['Income totals and matching incoming transactions'],
         consequences: [],
-        data: selectIncomeSummary(state, args as TransactionSearch),
+        data: selectIncomeSummary(state, filters),
       };
+    }
     case 'list_recurring_activity':
+      noReadArgs(args);
       return {
         title: 'Share recurring activity',
         risk: 'read',
@@ -279,6 +401,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectRecurringActivity(state),
       };
     case 'list_payees':
+      noReadArgs(args);
       return {
         title: 'Share payees',
         risk: 'read',
@@ -287,6 +410,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectPayees(state),
       };
     case 'list_scheduled_payments':
+      noReadArgs(args);
       return {
         title: 'Share scheduled payments',
         risk: 'read',
@@ -295,6 +419,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectScheduledPayments(state),
       };
     case 'list_cards':
+      noReadArgs(args);
       return {
         title: 'Share cards',
         risk: 'read',
@@ -303,6 +428,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectCards(state),
       };
     case 'get_card_controls':
+      assertAllowedKeys(args, ['cardId']);
       return {
         title: 'Share card controls',
         risk: 'read',
@@ -311,6 +437,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectCardControls(state, stringArg(args, 'cardId')),
       };
     case 'list_budgets':
+      noReadArgs(args);
       return {
         title: 'Share budgets',
         risk: 'read',
@@ -319,6 +446,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectBudgets(state),
       };
     case 'list_goals':
+      noReadArgs(args);
       return {
         title: 'Share savings goals',
         risk: 'read',
@@ -327,6 +455,7 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         data: selectGoals(state),
       };
     case 'list_subscriptions':
+      noReadArgs(args);
       return {
         title: 'Share subscriptions',
         risk: 'read',
@@ -334,15 +463,19 @@ function readPlan(context: OperationContext, operation: ReadOperationName): Oper
         consequences: [],
         data: selectSubscriptions(state),
       };
-    case 'get_agent_audit':
+    case 'get_agent_audit': {
+      assertAllowedKeys(args, ['limit']);
+      const limit = strictLimit(args) ?? 50;
       return {
         title: 'Share agent audit',
         risk: 'read',
         disclosure: ['Safe agent-action outcomes and timestamps'],
         consequences: [],
-        data: selectAgentAudit(state, typeof args.limit === 'number' ? args.limit : 50),
+        data: selectAgentAudit(state, limit),
       };
+    }
     case 'get_security_status':
+      noReadArgs(args);
       return {
         title: 'Share security status',
         risk: 'read',

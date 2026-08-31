@@ -16,11 +16,13 @@ import {
   mutableTransaction,
   optionalBoolean,
   optionalMinor,
-  optionalString,
+  optionalNonEmptyString,
   requiredBoolean,
   requiredDate,
   requiredMinor,
+  requiredMonth,
   requiredString,
+  reservedForGoals,
   slug,
 } from './utils';
 
@@ -117,7 +119,7 @@ function prepareCreateGoal(context: OperationContext): OperationPlan {
 
 function prepareUpdateGoal(context: OperationContext): OperationPlan {
   const goal = findGoal(context.state, requiredString(context.args, 'goalId'));
-  const name = optionalString(context.args, 'name', 60) ?? goal.name;
+  const name = optionalNonEmptyString(context.args, 'name', 60) ?? goal.name;
   const target = optionalMinor(context.args, 'targetMinor') ?? goal.target;
   const deadline = context.args.deadline === undefined
     ? goal.deadline
@@ -153,7 +155,12 @@ function prepareFundGoal(context: OperationContext): OperationPlan {
   }
   const amount = requiredMinor(context.args, 'amountMinor');
   const requestedFloor = optionalMinor(context.args, 'balanceFloorMinor', { allowZero: true });
-  const { after, floor } = floorAfter(source, amount, requestedFloor);
+  const { after, floor } = floorAfter(
+    source,
+    amount,
+    requestedFloor,
+    reservedForGoals(context.state, source.id),
+  );
   const savedAfter = addATC(goal.savedAmount, amount);
   if (savedAfter > goal.target) {
     throw new Error(`Contribution exceeds the remaining ${formatATC(subtractATC(goal.target, goal.savedAmount))}`);
@@ -178,6 +185,30 @@ function prepareFundGoal(context: OperationContext): OperationPlan {
       mutableDestination.availableBalance = addATC(mutableDestination.availableBalance, amount);
       mutable.savedAmount = addATC(mutable.savedAmount, amount);
       mutable.status = mutable.savedAmount >= mutable.target ? 'completed' : 'active';
+      const common = {
+        amount,
+        category: 'Savings goal',
+        date: context.now.toISOString(),
+        status: 'posted' as const,
+        memo: `Fund ${goal.name}`,
+        disputeStatus: 'ineligible' as const,
+      };
+      draft.transactions.push(
+        {
+          ...common,
+          id: `transaction-goal-fund-out-${context.operationId}`,
+          accountId: source.id,
+          direction: 'debit',
+          merchant: goal.name,
+        },
+        {
+          ...common,
+          id: `transaction-goal-fund-in-${context.operationId}`,
+          accountId: destination.id,
+          direction: 'credit',
+          merchant: source.name,
+        },
+      );
       appendAudit(draft, context, goal.id, `${formatATC(amount)} added to ${goal.name}.`);
     },
   };
@@ -197,13 +228,17 @@ function prepareWithdrawGoal(context: OperationContext): OperationPlan {
   if (amount > goal.savedAmount) {
     throw new Error(`Withdrawal exceeds the ${formatATC(goal.savedAmount)} saved in this goal`);
   }
+  const reservedAfter = subtractATC(reservedForGoals(context.state, source.id), amount);
+  const { after, floor } = floorAfter(source, amount, undefined, reservedAfter);
   return {
     title: `Withdraw from ${goal.name}`,
     risk: 'high',
     disclosure: [],
     consequences: [
       `Move ${formatATC(amount)} from ${goal.name} to ${destination.name}`,
+      `Source balance after: ${formatATC(after)}`,
       `Goal saved after: ${formatATC(subtractATC(goal.savedAmount, amount))}`,
+      `Remaining reserved floor: ${formatATC(floor)}`,
     ],
     reducer(draft) {
       const mutableSource = mutableAccount(draft, source.id);
@@ -215,6 +250,30 @@ function prepareWithdrawGoal(context: OperationContext): OperationPlan {
       mutableDestination.availableBalance = addATC(mutableDestination.availableBalance, amount);
       mutable.savedAmount = subtractATC(mutable.savedAmount, amount);
       mutable.status = 'active';
+      const common = {
+        amount,
+        category: 'Savings goal',
+        date: context.now.toISOString(),
+        status: 'posted' as const,
+        memo: `Withdraw from ${goal.name}`,
+        disputeStatus: 'ineligible' as const,
+      };
+      draft.transactions.push(
+        {
+          ...common,
+          id: `transaction-goal-withdraw-out-${context.operationId}`,
+          accountId: source.id,
+          direction: 'debit',
+          merchant: destination.name,
+        },
+        {
+          ...common,
+          id: `transaction-goal-withdraw-in-${context.operationId}`,
+          accountId: destination.id,
+          direction: 'credit',
+          merchant: goal.name,
+        },
+      );
       appendAudit(draft, context, goal.id, `${formatATC(amount)} withdrawn from ${goal.name}.`);
     },
   };
@@ -257,13 +316,13 @@ function prepareNote(context: OperationContext): OperationPlan {
 }
 
 function prepareMonthlyPlan(context: OperationContext): OperationPlan {
-  const month = requiredString(context.args, 'month', 7);
-  if (!/^\d{4}-\d{2}$/.test(month)) {
-    throw new Error('month must use YYYY-MM');
-  }
+  const month = requiredMonth(context.args, 'month');
   const totalBudget = context.state.budgets.reduce((sum, item) => sum + item.limit, 0);
   const totalSpent = context.state.budgets.reduce((sum, item) => sum + item.spent, 0);
-  const upcoming = context.state.payments.filter(({ status }) => status === 'scheduled');
+  const upcoming = context.state.payments.filter(({ status, date }) =>
+    status === 'scheduled' && date.slice(0, 7) === month);
+  const subscriptions = context.state.subscriptions.filter(({ status, nextDate }) =>
+    status === 'active' && nextDate.slice(0, 7) === month);
   return {
     title: `Prepare plan for ${month}`,
     risk: 'read',
@@ -274,7 +333,7 @@ function prepareMonthlyPlan(context: OperationContext): OperationPlan {
       budgetLimitMinor: totalBudget,
       budgetSpentMinor: totalSpent,
       goals: structuredClone(context.state.goals),
-      subscriptions: structuredClone(context.state.subscriptions),
+      subscriptions: structuredClone(subscriptions),
       upcomingPayments: structuredClone(upcoming),
     },
   };

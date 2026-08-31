@@ -71,6 +71,7 @@ export interface Payment {
   payeeId?: string;
   requestFrom?: string;
   amount: MinorATC;
+  balanceFloor: MinorATC;
   date: string;
   recurrence: PaymentRecurrence | null;
   status: 'scheduled' | 'completed' | 'paused' | 'failed' | 'cancelled' | 'requested';

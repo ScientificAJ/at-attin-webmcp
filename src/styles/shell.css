@@ -11,8 +11,23 @@
   min-height: 100vh;
 }
 
-.bank-shell[data-large-text] {
-  font-size: 1.15rem;
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: var(--page-gutter);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--signal);
+  background: var(--obsidian);
+  color: var(--canvas);
+  text-decoration: none;
+  transform: translateY(calc(-100% - 1rem));
+  transition: transform var(--motion-fast) var(--ease-calm);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .bank-shell[data-high-contrast] {
@@ -115,6 +130,14 @@
   color: var(--muted);
   font-size: 0.79rem;
   letter-spacing: 0.03em;
+}
+
+.recovery-notice {
+  padding: 0.85rem var(--page-gutter);
+  border-bottom: 1px solid var(--signal);
+  background: color-mix(in srgb, var(--signal) 9%, var(--canvas));
+  color: var(--ink);
+  font-size: 0.88rem;
 }
 
 .text-button {

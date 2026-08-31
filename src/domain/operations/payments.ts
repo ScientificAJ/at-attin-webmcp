@@ -15,11 +15,13 @@ import {
   mutableAccount,
   mutablePayment,
   optionalMinor,
+  optionalNonEmptyString,
   optionalString,
   requiredBoolean,
   requiredDate,
   requiredMinor,
   requiredString,
+  reservedForGoals,
   slug,
 } from './utils';
 
@@ -29,16 +31,16 @@ function recurrence(args: Record<string, unknown>, now: Date): PaymentRecurrence
     throw new Error('frequency must be weekly, fortnightly, or monthly');
   }
   const nextDate = requiredDate(args, 'nextDate', now);
-  const endDate = optionalString(args, 'endDate', 10);
-  if (endDate !== undefined) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < nextDate) {
-      throw new Error('endDate must use YYYY-MM-DD and follow nextDate');
-    }
+  const endDate = args.endDate === undefined || args.endDate === null || args.endDate === ''
+    ? null
+    : requiredDate(args, 'endDate');
+  if (endDate !== null && endDate < nextDate) {
+    throw new Error('endDate must use YYYY-MM-DD and follow nextDate');
   }
   return {
     frequency: frequency as PaymentRecurrence['frequency'],
     nextDate,
-    endDate: endDate ?? null,
+    endDate,
   };
 }
 
@@ -48,6 +50,7 @@ function completedPaymentRecords(
   payeeId: string,
   payeeName: string,
   amount: Payment['amount'],
+  balanceFloor: Payment['balanceFloor'],
   note: string,
 ): { payment: Payment; transaction: Transaction } {
   return {
@@ -56,6 +59,7 @@ function completedPaymentRecords(
       sourceAccountId,
       payeeId,
       amount,
+      balanceFloor,
       date: context.now.toISOString(),
       recurrence: null,
       status: 'completed',
@@ -85,7 +89,12 @@ function prepareTransfer(context: OperationContext): OperationPlan {
   }
   const amount = requiredMinor(args, 'amountMinor');
   const requestedFloor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true });
-  const { after, floor } = floorAfter(source, amount, requestedFloor);
+  const { after, floor } = floorAfter(
+    source,
+    amount,
+    requestedFloor,
+    reservedForGoals(state, source.id),
+  );
   const destinationAfter = addATC(destination.availableBalance, amount);
   const note = optionalString(args, 'note') ?? '';
 
@@ -146,7 +155,12 @@ function preparePayPayee(context: OperationContext): OperationPlan {
   const payee = findPayee(state, requiredString(args, 'payeeId'));
   const amount = requiredMinor(args, 'amountMinor');
   const requestedFloor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true });
-  const { after, floor } = floorAfter(source, amount, requestedFloor);
+  const { after, floor } = floorAfter(
+    source,
+    amount,
+    requestedFloor,
+    reservedForGoals(state, source.id),
+  );
   const note = optionalString(args, 'note') ?? '';
 
   return {
@@ -174,6 +188,7 @@ function preparePayPayee(context: OperationContext): OperationPlan {
         payee.id,
         payee.name,
         amount,
+        floor,
         note,
       );
       draft.payments.push(records.payment);
@@ -193,9 +208,13 @@ function prepareSchedule(context: OperationContext, recurring: boolean): Operati
   const source = findAccount(state, requiredString(args, 'sourceAccountId'));
   const payee = findPayee(state, requiredString(args, 'payeeId'));
   const amount = requiredMinor(args, 'amountMinor');
-  const floor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true })
-    ?? source.balanceFloor;
-  floorAfter(source, amount, floor);
+  const requestedFloor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true });
+  const { floor } = floorAfter(
+    source,
+    amount,
+    requestedFloor,
+    reservedForGoals(state, source.id),
+  );
   const paymentRecurrence = recurring ? recurrence(args, context.now) : null;
   const date = recurring
     ? paymentRecurrence!.nextDate
@@ -220,6 +239,7 @@ function prepareSchedule(context: OperationContext, recurring: boolean): Operati
         sourceAccountId: source.id,
         payeeId: payee.id,
         amount,
+        balanceFloor: floor,
         date: `${date}T09:00:00.000Z`,
         recurrence: paymentRecurrence,
         status: 'scheduled',
@@ -242,7 +262,7 @@ function prepareUpdateRecurring(context: OperationContext): OperationPlan {
     throw new Error('Payment is not an editable recurring payment');
   }
   const amount = optionalMinor(args, 'amountMinor') ?? payment.amount;
-  const frequencyValue = optionalString(args, 'frequency');
+  const frequencyValue = optionalNonEmptyString(args, 'frequency');
   if (frequencyValue && !['weekly', 'fortnightly', 'monthly'].includes(frequencyValue)) {
     throw new Error('frequency must be weekly, fortnightly, or monthly');
   }
@@ -251,8 +271,21 @@ function prepareUpdateRecurring(context: OperationContext): OperationPlan {
     : requiredDate(args, 'nextDate', context.now);
   const endDate = args.endDate === undefined
     ? payment.recurrence.endDate
-    : optionalString(args, 'endDate', 10) ?? null;
+    : args.endDate === null || args.endDate === ''
+      ? null
+      : requiredDate(args, 'endDate');
+  if (endDate !== null && endDate < nextDate) {
+    throw new Error('endDate must use YYYY-MM-DD and follow nextDate');
+  }
   const frequency = (frequencyValue ?? payment.recurrence.frequency) as PaymentRecurrence['frequency'];
+  const source = findAccount(state, payment.sourceAccountId);
+  const requestedFloor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true });
+  const { floor } = floorAfter(
+    source,
+    amount,
+    requestedFloor ?? payment.balanceFloor,
+    reservedForGoals(state, source.id),
+  );
 
   return {
     title: 'Update recurring payment',
@@ -262,10 +295,12 @@ function prepareUpdateRecurring(context: OperationContext): OperationPlan {
       `Recurring amount: ${formatATC(amount)}`,
       `Cadence: ${frequency}`,
       `Next payment: ${displayDate(nextDate)}`,
+      `Balance floor: ${formatATC(floor)}`,
     ],
     reducer(draft) {
       const mutable = mutablePayment(draft, payment.id);
       mutable.amount = amount;
+      mutable.balanceFloor = floor;
       mutable.date = `${nextDate}T09:00:00.000Z`;
       mutable.recurrence = { frequency, nextDate, endDate };
       appendAudit(draft, context, payment.id, 'Recurring payment details updated.');
@@ -310,7 +345,12 @@ function prepareRetry(context: OperationContext): OperationPlan {
   }
   const source = findAccount(context.state, payment.sourceAccountId);
   const payee = payment.payeeId ? findPayee(context.state, payment.payeeId) : null;
-  floorAfter(source, payment.amount);
+  floorAfter(
+    source,
+    payment.amount,
+    payment.balanceFloor,
+    reservedForGoals(context.state, source.id),
+  );
 
   return {
     title: 'Retry failed payment',
@@ -349,6 +389,7 @@ function prepareRequestMoney(context: OperationContext): OperationPlan {
   const from = requiredString(context.args, 'from', 80);
   const amount = requiredMinor(context.args, 'amountMinor');
   const note = optionalString(context.args, 'note') ?? '';
+  const source = findAccount(context.state, 'account-daily');
   const paymentId = `payment-${context.operationId}`;
   return {
     title: `Request money from ${from}`,
@@ -358,9 +399,10 @@ function prepareRequestMoney(context: OperationContext): OperationPlan {
     reducer(draft) {
       draft.payments.push({
         id: paymentId,
-        sourceAccountId: 'account-daily',
+        sourceAccountId: source.id,
         requestFrom: from,
         amount,
+        balanceFloor: source.balanceFloor,
         date: context.now.toISOString(),
         recurrence: null,
         status: 'requested',
@@ -377,7 +419,8 @@ function prepareAddPayee(context: OperationContext): OperationPlan {
   const trusted = context.args.trusted === undefined
     ? false
     : requiredBoolean(context.args, 'trusted');
-  if (context.state.payees.some((payee) => payee.accountAlias === accountAlias)) {
+  if (context.state.payees.some((payee) =>
+    payee.accountAlias.toLocaleLowerCase('en-US') === accountAlias.toLocaleLowerCase('en-US'))) {
     throw new Error('A payee with this account alias already exists');
   }
   const id = `payee-${slug(name)}-${context.operationId.slice(-6)}`;
@@ -395,16 +438,33 @@ function prepareAddPayee(context: OperationContext): OperationPlan {
 
 function prepareUpdatePayee(context: OperationContext): OperationPlan {
   const payee = findPayee(context.state, requiredString(context.args, 'payeeId'));
-  const name = optionalString(context.args, 'name', 80) ?? payee.name;
-  const accountAlias = optionalString(context.args, 'accountAlias', 80) ?? payee.accountAlias;
+  const name = optionalNonEmptyString(context.args, 'name', 80) ?? payee.name;
+  const accountAlias = optionalNonEmptyString(context.args, 'accountAlias', 80)
+    ?? payee.accountAlias;
   const trusted = context.args.trusted === undefined
     ? payee.trusted
     : requiredBoolean(context.args, 'trusted');
+  const destinationChanged = accountAlias !== payee.accountAlias;
+  if (destinationChanged && context.state.payees.some((candidate) =>
+    candidate.id !== payee.id
+    && candidate.accountAlias.toLocaleLowerCase('en-US')
+      === accountAlias.toLocaleLowerCase('en-US'))) {
+    throw new Error('A payee with this account alias already exists');
+  }
+  const affectedPayments = context.state.payments.filter((payment) =>
+    payment.payeeId === payee.id && ['scheduled', 'paused'].includes(payment.status));
   return {
     title: `Update ${payee.name}`,
-    risk: 'medium',
+    risk: destinationChanged ? 'high' : 'medium',
     disclosure: [],
-    consequences: [`Payee name: ${name}`, `Trusted payee: ${trusted ? 'yes' : 'no'}`],
+    consequences: [
+      `Payee name: ${payee.name} → ${name}`,
+      `Destination alias: ${payee.accountAlias} → ${accountAlias}`,
+      ...(destinationChanged ? [
+        `${affectedPayments.length} scheduled or recurring payments will use the new destination alias`,
+      ] : []),
+      `Trusted payee: ${payee.trusted ? 'yes' : 'no'} → ${trusted ? 'yes' : 'no'}`,
+    ],
     reducer(draft) {
       const mutable = draft.payees.find(({ id }) => id === payee.id);
       if (!mutable) throw new Error('Prepared payee is no longer available');
