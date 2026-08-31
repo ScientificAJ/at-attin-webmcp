@@ -54,3 +54,14 @@
 - Sites version 3 saved commit `fabb4c98c6b559d5e830b8c2852d63ae021ccff9` with its exact local archive and deployed successfully.
 - Authenticated production checks: `/` returned the redirect-only document; `/settings/agent` returned HTTP 200, the complete app shell, and all required security headers.
 - The selected in-app browser reached the private **Continue with ChatGPT** gate but did not hold a ChatGPT web session. No deployed-origin DOM interaction is claimed; the exact archive's browser UI is covered locally and its emitted production Worker is covered directly.
+
+## Approved post-release amendment — embedded Featherless agent
+
+The user clarified that the hackathon prototype must contain a functional agent inside the website, not rely only on an experimental browser agent. The release was therefore extended without adding a deterministic intent engine:
+
+- Added the persistent **Ask At Attin** conversation surface, powered by Featherless and `moonshotai/Kimi-K3`.
+- Added a same-origin Sites Worker endpoint with a private server-only Featherless key, an exact 56-tool allowlist, bounded request/provider validation, one-tool-at-a-time execution, and a four-step ceiling.
+- Reused the production WebMCP descriptors and `ToolBridge`; no model path can bypass schema validation, Agent Access, read confirmation, typed `YES`, atomic commit, or agent audit.
+- Proved that the first model request contains no bank state, an unsupported tool is rejected, and multi-step work opens a separate confirmation for every tool.
+- Added the agent UI and Worker tests first. The initial focused runs failed because the runtime, component, and Worker endpoint did not exist; the implemented focused slices then passed.
+- Final pre-publication verification passed: 11 files and 140/140 tests, lint with no findings, a 4,758-module production build, and the Sites Worker contract.

@@ -52,8 +52,8 @@ export function AgentAccessControl({ detailed = false }: AgentAccessControlProps
     void toolRegistry.sync({ signedIn, agentUnlocked: next }).then(
       () => setMessage(next
         ? 'Agent Access unlocked. Every task still needs confirmation.'
-        : 'Agent Access locked. All imperative tools were removed.'),
-      () => setMessage('WebMCP registration failed. Lock Agent Access and try again.'),
+        : 'Agent Access locked. All agent tool access is blocked.'),
+      () => setMessage('Browser WebMCP registration failed. The in-site agent remains available.'),
     );
   };
 
@@ -62,7 +62,9 @@ export function AgentAccessControl({ detailed = false }: AgentAccessControlProps
       <header>
         <p className="eyebrow">Human control</p>
         <h2 id="agent-control-title">Agent access</h2>
-        <p>{webMcpAvailable ? '60 tools available' : 'WebMCP is unavailable in this browser'}</p>
+        <p>{webMcpAvailable
+          ? 'In-site agent and browser WebMCP ready'
+          : 'In-site Featherless agent ready · browser WebMCP unavailable'}</p>
       </header>
       {detailed ? (
         <ul className="agent-capabilities">
@@ -75,8 +77,8 @@ export function AgentAccessControl({ detailed = false }: AgentAccessControlProps
         <div className="agent-access-control__summary">
           <ShieldCheck aria-hidden="true" weight="regular" />
           <p>{unlocked
-            ? 'Native WebMCP tools are discoverable. Every read and change still pauses for your approval.'
-            : 'Tools are hidden from agents. All manual banking remains available.'}</p>
+            ? 'The in-site agent and compatible browser agents may request tools. Every read and change still pauses for your approval.'
+            : 'Tools are hidden from every agent. All manual banking remains available.'}</p>
         </div>
       )}
       <button className="signal-action" onClick={toggle} type="button">

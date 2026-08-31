@@ -2,24 +2,35 @@
 
 ## Purpose and threat model
 
-At Attin uses fictional money, but it treats the browser agent as an untrusted caller crossing a meaningful authorization and disclosure boundary. The design assumes an agent may send malformed, over-broad, stale, repeated, cancelled, or prompt-influenced requests. The agent may prepare work; only the present human may approve it.
+At Attin uses fictional money, but it treats both the in-site Featherless agent and compatible browser agents as untrusted callers crossing a meaningful authorization and disclosure boundary. The design assumes an agent may send malformed, over-broad, stale, repeated, cancelled, or prompt-influenced requests. The agent may prepare work; only the present human may approve it.
 
-The prototype does not claim production banking security. Its goal is to demonstrate a defensible browser-native WebMCP interaction contract without a built-in assistant or autonomous execution layer.
+The prototype does not claim production banking security. Its goal is to demonstrate a defensible WebMCP interaction contract where a real model can reason about complex banking tasks without gaining direct authority to disclose data or commit actions.
 
 ## Boundary overview
 
 ```mermaid
 flowchart LR
-  A["Browser agent"] --> B["Closed bounded schema"]
-  B --> C["Prepare without mutation"]
-  C --> D["At Attin confirmation"]
-  D -->|"Trusted human Yes"| E["Single-use authorization"]
-  E --> F["Version-bound atomic commit"]
-  F --> G["Compact result"]
-  B -->|"Invalid"| H["Safe rejection audit"]
-  D -->|"Cancel / expire / abort"| I["No disclosure or mutation"]
-  F -->|"Stale / duplicate / persistence failure"| I
+  A["In-site Featherless agent"] --> B["56 WebMCP descriptors"]
+  J["Compatible browser agent"] --> B
+  B --> C["Closed bounded schema"]
+  C --> D["Prepare without mutation"]
+  D --> E["At Attin confirmation"]
+  E -->|"Trusted human Yes"| F["Single-use authorization"]
+  F --> G["Version-bound atomic commit"]
+  G --> H["Compact result"]
+  C -->|"Invalid"| I["Safe rejection audit"]
+  E -->|"Cancel / expire / abort"| K["No disclosure or mutation"]
+  G -->|"Stale / duplicate / persistence failure"| K
 ```
+
+## Model boundary
+
+- The Featherless API key exists only as a private Sites environment secret; it is never embedded in JavaScript, HTML, local storage, a model prompt, or a tool result.
+- The browser calls only the same-origin `POST /api/agent` endpoint. Cross-origin requests, non-JSON requests, oversized bodies, unknown tools, malformed provider output, and missing secrets fail closed.
+- The first model request contains the user's text plus public tool names, descriptions, and schemas—never balances, transactions, cards, payees, or `BankState`.
+- Protected tool output is sent back to the model only after the user approves the matching At Attin confirmation.
+- Provider output is untrusted. The client accepts only allowlisted tool names, revalidates arguments against the WebMCP schema, and delegates execution to `ToolBridge`.
+- The model may request only one tool at a time, with a maximum of four individually confirmed steps per turn. It cannot unlock Agent Access, press confirmation controls, mint an approval, or execute in the background.
 
 ## Registration and lifecycle
 
@@ -69,7 +80,8 @@ No protected output or banking mutation occurs when any of these conditions is t
 - the banking state version changed after preview;
 - an idempotency key has already been consumed;
 - persistence or post-reducer schema validation fails;
-- a prior legacy scheduled payment has no recoverable confirmed floor.
+- a prior legacy scheduled payment has no recoverable confirmed floor;
+- the Featherless secret is absent, the provider fails, or the model chooses an unknown or malformed tool call.
 
 ## Money and domain safeguards
 
@@ -111,6 +123,9 @@ The confirmation UI restores and traps focus, includes a visible cancel action, 
 ## Source map
 
 - `src/webmcp/registry.ts` — native lifecycle and cleanup
+- `src/agent/runtime.ts` — in-site agent loop over the 56 WebMCP descriptors
+- `src/components/AgentConsole.tsx` — accessible in-site conversation surface
+- `worker/index.js` — same-origin, server-secret Featherless proxy and response validation
 - `src/webmcp/schemas.ts` — closed bounded schemas
 - `src/webmcp/bridge.ts` — validation, confirmation, output, and agent audit
 - `src/webmcp/confirmation.ts` — trusted, expiring, single-use authorization

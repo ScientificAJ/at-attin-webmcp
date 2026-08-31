@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { createSessionStore, type SessionStore } from '../auth/session';
+import { EmbeddedAgentRuntime } from '../agent/runtime';
 import { createBankStore, type BankStore } from '../domain/store';
 import { ToolBridge } from '../webmcp/bridge';
 import {
@@ -25,6 +26,7 @@ import '../styles/plan.css';
 import '../styles/settings.css';
 import '../styles/safety-agent.css';
 import '../styles/support.css';
+import '../styles/agent-console.css';
 import { AppRouteTree, type AppServices } from './routes';
 
 function supportsWebMcp(): boolean {
@@ -72,6 +74,7 @@ export function App() {
     const confirmationCoordinator = new ConfirmationCoordinator();
     const toolBridge = new ToolBridge(bankStore, confirmationCoordinator);
     const toolRegistry = new ToolRegistry({ bridge: toolBridge });
+    const embeddedAgent = new EmbeddedAgentRuntime(toolBridge);
     return {
       session,
       bankStore,
@@ -79,6 +82,7 @@ export function App() {
       confirmationCoordinator,
       toolBridge,
       toolRegistry,
+      embeddedAgent,
       trustPredicate: hasTrustedUserActivation,
     };
   });

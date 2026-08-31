@@ -1,6 +1,7 @@
 import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { createSessionStore, type SessionStore } from '../auth/session';
+import { EmbeddedAgentRuntime } from '../agent/runtime';
 import { AppRouteTree, type AppServices } from '../app/routes';
 import { createBankStore, type BankStore } from '../domain/store';
 import { ToolBridge } from '../webmcp/bridge';
@@ -61,6 +62,7 @@ export function renderRouter(
     bridge: toolBridge,
     getModelContext: () => options.modelContext,
   });
+  const embeddedAgent = new EmbeddedAgentRuntime(toolBridge);
   const services: AppServices = {
     session,
     bankStore: store,
@@ -68,6 +70,7 @@ export function renderRouter(
     confirmationCoordinator,
     toolBridge,
     toolRegistry,
+    embeddedAgent,
     trustPredicate,
   };
   const view = render(

@@ -14,6 +14,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import type { SessionStore } from '../auth/session';
+import type { EmbeddedAgentRuntime } from '../agent/runtime';
 import { BankShell } from '../components/BankShell';
 import type { BankState } from '../domain/models';
 import type { BankStore } from '../domain/store';
@@ -40,6 +41,7 @@ export interface AppServices {
   confirmationCoordinator: ConfirmationCoordinator;
   toolBridge: ToolBridge;
   toolRegistry: ToolRegistry;
+  embeddedAgent: EmbeddedAgentRuntime;
   trustPredicate: TrustPredicate;
 }
 

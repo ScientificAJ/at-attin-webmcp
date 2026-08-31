@@ -236,6 +236,16 @@ describe('At Attin application shell', () => {
     expect(await screen.findByText('WebMCP needs attention')).toBeVisible();
   });
 
+  it('keeps the model-backed At Attin agent available when browser WebMCP is unavailable', async () => {
+    const user = userEvent.setup();
+    renderAuthenticated('/', { webMcpAvailable: false });
+
+    expect(screen.getByText('WebMCP unavailable')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Open At Attin agent' }));
+    expect(screen.getByRole('heading', { name: 'Ask At Attin' })).toBeVisible();
+    expect(screen.getByText(/featherless provides the reasoning/i)).toBeVisible();
+  });
+
   it('signs out in memory and returns protected content to login', async () => {
     const user = userEvent.setup();
     const { session } = renderAuthenticated('/settings');

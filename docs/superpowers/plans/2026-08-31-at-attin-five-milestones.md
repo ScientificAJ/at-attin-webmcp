@@ -4,9 +4,9 @@
 
 **Goal:** Build, verify, and deploy the complete At Attin fictional bank through five high-cohesion milestones, with 60 genuine WebMCP surfaces and an app-owned human confirmation boundary.
 
-**Architecture:** A Sites-ready React and TypeScript app owns one versioned local banking store. Manual UI and WebMCP handlers use the same domain services; the WebMCP bridge adds schema validation, prepare-confirm-commit authorization, lifecycle cancellation, and audit logging. The five milestones separate foundation, banking core, WebMCP/security, visual product, and release proof so each review gate judges a complete subsystem.
+**Architecture:** A Sites-ready React and TypeScript app owns one versioned local banking store. Manual UI, the embedded Featherless agent, and native-browser WebMCP handlers use the same domain services; the WebMCP bridge adds schema validation, prepare-confirm-commit authorization, lifecycle cancellation, and audit logging. The five milestones separate foundation, banking core, WebMCP/security, visual product, and release proof so each review gate judges a complete subsystem.
 
-**Tech Stack:** React 19, TypeScript, Vite, React Router, Zod, Phosphor Icons, Vitest, Testing Library, Playwright, native WebMCP imperative/declarative APIs, Product Design prototype runtime, Sites hosting
+**Tech Stack:** React 19, TypeScript, Vite, React Router, Zod, Phosphor Icons, Vitest, Testing Library, Playwright, native WebMCP imperative/declarative APIs, Featherless, Product Design prototype runtime, Sites hosting
 
 **Spec:** docs/superpowers/specs/2026-08-31-at-attin-design.md
 
@@ -14,7 +14,7 @@
 
 - ATC is fictional, has no cash value, and is stored only as integer minor units.
 - Credentials are exactly john.attin / attin2026 and are visibly labeled prototype-only.
-- No built-in chatbot, natural-language parser, deterministic assistant, hosted LLM, remote model, real financial rail, analytics SDK, or API key.
+- The approved post-plan amendment adds an in-site Featherless/Kimi K3 agent. It has no deterministic intent parser, direct banking execution, client-exposed key, real financial rail, analytics SDK, or autonomous background action.
 - Exactly 60 meaningful WebMCP surfaces are discoverable after login and while Agent Access is unlocked: 56 imperative tools and four declarative tools.
 - Every agent read and mutation pauses on an At Attin-owned confirmation surface before protected data returns or state commits.
 - No WebMCP tool can approve a pending action, unlock Agent Access, or reuse approval.

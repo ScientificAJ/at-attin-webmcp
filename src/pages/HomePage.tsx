@@ -74,7 +74,7 @@ export function HomePage() {
               <div>
                 <p className="eyebrow">WebMCP control</p>
                 <h2 id="home-agent-title">Ready when you are.</h2>
-                <p>The browser agent can prepare any banking task. At Attin pauses here before it shares or changes anything.</p>
+                <p>Ask At Attin in plain language. Its Featherless-powered agent uses WebMCP tools, and pauses here before it shares or changes anything.</p>
               </div>
               <ul>
                 <li><ShieldCheck aria-hidden="true" /> Every read needs your confirmation</li>

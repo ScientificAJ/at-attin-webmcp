@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
-import worker from "../worker/index.js";
+import worker, { AGENT_TOOL_NAMES, createWorker } from "../worker/index.js";
+
+test("keeps the server allowlist aligned to the exact 56 imperative tools", () => {
+  assert.equal(AGENT_TOOL_NAMES.length, 56);
+  assert.equal(new Set(AGENT_TOOL_NAMES).size, 56);
+});
 
 test("serves existing static assets without a fallback", async () => {
   const calls = [];
@@ -84,6 +89,86 @@ test("does not turn missing API or write requests into the app shell", async () 
     assert.equal(response.status, 404);
     assert.equal(calls, 1);
   }
+});
+
+test("routes a same-origin agent request through Featherless and returns one bounded tool call", async () => {
+  const agentWorker = createWorker({
+    fetchImpl: async (url, init) => {
+      assert.equal(url, "https://api.featherless.ai/v1/chat/completions");
+      assert.equal(init.headers.Authorization, "Bearer server-only-key");
+      const outbound = JSON.parse(init.body);
+      assert.equal(outbound.model, "moonshotai/Kimi-K3");
+      assert.equal(outbound.parallel_tool_calls, false);
+      assert.equal(outbound.tools[0].function.name, "get_overview");
+      return new Response(JSON.stringify({
+        model: "moonshotai/Kimi-K3",
+        choices: [{
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: [{
+              id: "call-overview",
+              type: "function",
+              function: { name: "get_overview", arguments: "{}" },
+            }],
+          },
+        }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+  const response = await agentWorker.fetch(new Request("https://example.test/api/agent", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "https://example.test",
+    },
+    body: JSON.stringify({
+      userText: "Show my overview",
+      steps: [],
+      tools: [{
+        name: "get_overview",
+        description: "Prepare a concise overview.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      }],
+    }),
+  }), {
+    ASSETS: { fetch: async () => new Response("missing", { status: 404 }) },
+    FEATHERLESS_API_KEY: "server-only-key",
+    FEATHERLESS_MODEL: "moonshotai/Kimi-K3",
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    kind: "tool_call",
+    id: "call-overview",
+    name: "get_overview",
+    arguments: {},
+    model: "moonshotai/Kimi-K3",
+  });
+  assert.equal(response.headers.get("cache-control"), "no-store");
+});
+
+test("fails closed when the Featherless secret or same-origin boundary is missing", async () => {
+  const env = {
+    ASSETS: { fetch: async () => new Response("missing", { status: 404 }) },
+  };
+  const requestBody = JSON.stringify({ userText: "Show my overview", steps: [], tools: [] });
+
+  const missingSecret = await worker.fetch(new Request("https://example.test/api/agent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://example.test" },
+    body: requestBody,
+  }), env);
+  assert.equal(missingSecret.status, 503);
+  assert.deepEqual(await missingSecret.json(), { error: "agent-unavailable" });
+
+  const crossOrigin = await worker.fetch(new Request("https://example.test/api/agent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://attacker.test" },
+    body: requestBody,
+  }), { ...env, FEATHERLESS_API_KEY: "server-only-key" });
+  assert.equal(crossOrigin.status, 403);
+  assert.deepEqual(await crossOrigin.json(), { error: "cross-origin-agent-request" });
 });
 
 test("emits the files required by Sites packaging", async () => {

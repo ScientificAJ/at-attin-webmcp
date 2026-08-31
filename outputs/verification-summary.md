@@ -13,12 +13,21 @@ Production URL: [https://at-attin.astronebulae.chatgpt.site](https://at-attin.as
 | Gate | Result |
 |---|---|
 | Integrated WebMCP hero and rejection evaluations | 5/5 passed |
-| Complete unit and integration suite | 133/133 passed across 9 files |
+| Complete unit and integration suite | 140/140 passed across 11 files |
 | ESLint | Passed with no findings |
-| TypeScript and production build | Passed; 4,755 modules transformed and all Sites artifacts emitted |
-| Sites Worker contract | Passed, including direct routing and security-header checks |
+| TypeScript and production build | Passed; 4,758 modules transformed and all Sites artifacts emitted |
+| Sites Worker contract | Passed, including Featherless proxy, allowlist, routing, and security-header checks |
 
 The WebMCP evaluation suite proves a confirmed spending read with no banking-state mutation, the exact monthly 1,250 ATC Orbit Works recurrence with a persisted 5,000 ATC floor, atomic suspicious-charge protection with typed uppercase `YES`, closed-schema rejection without protected output, and fail-closed untrusted activation, abort, and stale-state behavior.
+
+## Embedded Featherless agent proof
+
+- The deployed app includes a real in-site conversation surface powered by Featherless and `moonshotai/Kimi-K3`; there is no deterministic intent parser.
+- The first model call receives only the user's request and the 56 public WebMCP descriptions/schemas. It receives no banking state before confirmation.
+- A model-selected tool is looked up in the exact production catalogue, revalidated, and executed through the same `ToolBridge` used by native WebMCP.
+- Every read or mutation pauses on the existing app-owned confirmation; multi-step requests run one tool at a time with a maximum of four individually confirmed steps.
+- The Featherless credential is a private Sites secret. It is absent from the browser bundle, prompts, local storage, test fixtures, and repository.
+- The same-origin Worker rejects missing secrets, cross-origin calls, invalid content types, oversized requests, unknown tools, malformed tool calls, and invalid provider responses.
 
 ## Native WebMCP contract proof
 
@@ -28,9 +37,9 @@ The WebMCP evaluation suite proves a confirmed spending read with no banking-sta
 - Authorization: every read and mutation waits on the app-owned confirmation coordinator.
 - Critical actions: trusted activation plus uppercase `YES`.
 - Output: compact JSON below 1,500 characters; protected free-form reads carry `untrustedContentHint`.
-- Fakes are test-only and are not shipped as a browser agent or deterministic execution engine.
+- `ModelContextFake` is test-only. The shipped in-site agent is a real Featherless model client over the production WebMCP descriptors, not a deterministic execution engine.
 
-The selected Codex in-app browser did not expose `document.modelContext`, so a live `getTools()` call was not available in that browser build. The product reported **WebMCP unavailable** and manual banking remained fully usable. The 56-tool native lifecycle, four form annotations, callbacks, cancellation, audit, and three hero flows were exercised against the production bridge and a test-only `ModelContextFake`.
+The selected Codex in-app browser did not expose `document.modelContext`, so a live native `getTools()` call was not available in that browser build. The product reports browser WebMCP as unavailable without disabling the in-site agent or manual banking. The 56-tool native lifecycle, four form annotations, callbacks, cancellation, audit, and three hero flows were exercised against the production bridge and a test-only `ModelContextFake`.
 
 ## Product and accessibility proof
 
@@ -50,7 +59,7 @@ One low-severity deployment weakness was validated before release: the new trust
 
 - ATC is fictional, local, and has no cash value.
 - Credentials are intentionally hard-coded for one hackathon user.
-- No bank rails, hosted model, built-in assistant, parser, API key, analytics SDK, or autonomous background execution exists.
+- No bank rails, deterministic parser, client-exposed API key, analytics SDK, or autonomous background execution exists. Featherless/Kimi K3 provides reasoning behind the same-origin Worker boundary.
 - The prototype demonstrates interaction and safety architecture; it does not claim production banking, privacy, accessibility, regulatory, or security certification.
 
 ## Deployment proof

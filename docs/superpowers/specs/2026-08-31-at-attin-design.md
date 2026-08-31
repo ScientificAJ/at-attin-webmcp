@@ -1,13 +1,13 @@
 # At Attin — Product and System Design Specification
 
-**Status:** Approved for implementation  
+**Status:** Implemented; amended to include the approved embedded Featherless agent
 **Date:** 31 August 2026  
 **Target:** The WebMCP Challenge  
 **Product:** A single-user, fictional-money retail bank operated through normal UI and genuine browser-native WebMCP tools
 
 ## 1. Executive summary
 
-At Attin is a complete retail-banking sandbox built around a simple proposition: banking becomes substantially more accessible when a user can state a goal to their browser agent and the bank exposes precise, structured tools for completing it.
+At Attin is a complete retail-banking sandbox built around a simple proposition: banking becomes substantially more accessible when a user can state a goal to an agent and the bank exposes precise, structured WebMCP tools for completing it. The shipped prototype includes an in-site Featherless-powered agent and also supports compatible browser-native agents.
 
 The prototype uses fictional Attin Credits (ATC), hard-coded demo credentials, device-local data and no real financial rails. It nevertheless treats agent authorization as a real security boundary. Every agent task—including read-only requests—must pause inside At Attin, display exactly what will be revealed or changed, and receive an explicit human **Yes, confirm** before the tool returns data or commits a mutation. The agent cannot approve its own work.
 
@@ -87,7 +87,7 @@ Three journeys receive the highest implementation and testing priority:
 - Real money, bank connections, payment processors or cryptocurrency
 - Multi-user accounts or shared server state
 - Real KYC, identity verification, lending or credit decisions
-- A built-in chatbot, deterministic assistant or hosted LLM
+- A deterministic intent parser, model-direct banking execution, or autonomous background actions
 - Claims of regulatory compliance or production-grade authentication
 - Autonomous background execution without a present user
 
@@ -342,7 +342,7 @@ For read-only tasks, the confirmation sheet states what information will be disc
 - Audit trail records actor, tool, safe parameter digest, decision and outcome.
 - Emergency human-only lock unregisters all tools immediately.
 - Security headers target `Permissions-Policy: tools=(self)`, origin isolation, a restrictive CSP, `Referrer-Policy: no-referrer` and MIME sniffing protection where Sites hosting permits configuration.
-- No remote model, API key, analytics service or third-party financial connection.
+- No client-exposed model key, analytics service or third-party financial connection. The Featherless key is a private Sites secret, and all model-selected actions still cross the app-owned WebMCP confirmation boundary.
 
 Chrome explicitly warns that prompt injection cannot be made perfectly safe inside a probabilistic model and recommends `untrustedContentHint`, `readOnlyHint`, cautious origin exposure and concise descriptions. At Attin treats those hints as defense-in-depth rather than authorization. Source: [WebMCP tool security](https://developer.chrome.com/docs/ai/webmcp/secure-tools).
 
@@ -462,7 +462,7 @@ The prototype is ready when all of the following are true:
 The under-three-minute demo should begin already logged in:
 
 1. Show the warm home screen and WebMCP connected status.
-2. Ask the browser agent to explain recent spending; confirm the read disclosure.
+2. Ask the in-site agent to explain recent spending; confirm the read disclosure.
 3. Ask it to schedule the Orbit Works payment only if the balance remains above a chosen floor; review and confirm the exact recurring payment.
 4. Ask it to investigate a suspicious charge; show the prepared dispute plus card freeze and the stronger typed confirmation.
 5. Open Safety & Agent to show the audit trail and activate the emergency lock.

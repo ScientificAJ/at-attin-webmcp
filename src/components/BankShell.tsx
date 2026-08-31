@@ -11,6 +11,7 @@ import {
   useBankState,
 } from '../app/routes';
 import { AgentStatus } from './AgentStatus';
+import { AgentConsole } from './AgentConsole';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { PrimaryNav } from './PrimaryNav';
 
@@ -25,6 +26,7 @@ export function BankShell() {
   const {
     bankStore,
     confirmationCoordinator,
+    embeddedAgent,
     session,
     toolRegistry,
     webMcpAvailable,
@@ -116,6 +118,7 @@ export function BankShell() {
         </nav>
         <p>ATC is fictional, device-local, and has no cash value.</p>
       </footer>
+      <AgentConsole runtime={embeddedAgent} unlocked={agentAccessUnlocked} />
       <ConfirmationDialog coordinator={confirmationCoordinator} />
     </div>
   );
