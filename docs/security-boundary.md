@@ -30,7 +30,7 @@ flowchart LR
 - Lock, logout, teardown, and failed partial registration abort the generation, unregister its tools, clear pending confirmation, and allow a clean later retry.
 - The default same-origin boundary is preserved; the implementation does not use `exposedTo`.
 - Four declarative tools remain visible forms. Their native activation and cancellation events are handled on `window`, filtered by exact `toolName`, and delegated to the same secure bridge.
-- Static assets use `public/_headers`, and the Sites Worker applies the same repository-owned anti-framing, content-type, referrer, and feature-policy headers to application-shell fallback responses. Together they keep trusted confirmation clicks from being visually redirected through an embedding origin.
+- The production build embeds the real application shell in the Sites Worker, which applies repository-owned anti-framing, content-type, referrer, and feature-policy headers to every app route. The public root asset contains only an immediate `/login` redirect, so no confirmation or banking UI is exposed on the static-first path; `public/_headers` remains defense in depth for hosts that honor it.
 
 ## Argument validation
 

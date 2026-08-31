@@ -97,3 +97,33 @@ test("emits the files required by Sites packaging", async () => {
   assert.match(staticHeaders, /frame-ancestors 'none'/);
   assert.match(staticHeaders, /X-Frame-Options: DENY/i);
 });
+
+test("keeps the built app shell behind the security-header Worker", async () => {
+  const builtWorker = (
+    await import(new URL("../dist/server/index.js?secure-shell", import.meta.url))
+  ).default;
+  const response = await builtWorker.fetch(
+    new Request("https://example.test/settings/agent", {
+      headers: { accept: "text/html" },
+    }),
+    {
+      ASSETS: {
+        fetch: async () => new Response("missing", { status: 404 }),
+      },
+    },
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /<title>At Attin<\/title>/);
+  assert.match(
+    response.headers.get("content-security-policy") ?? "",
+    /frame-ancestors 'none'/,
+  );
+
+  const publicRoot = await readFile(
+    new URL("../dist/client/index.html", import.meta.url),
+    "utf8",
+  );
+  assert.match(publicRoot, /location\.replace\("\/login"\)/);
+  assert.doesNotMatch(publicRoot, /\/assets\/index-[^\"]+\.js/);
+});

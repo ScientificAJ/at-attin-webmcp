@@ -17,6 +17,8 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
 };
 
+const APP_SHELL_HTML = /* __AT_ATTIN_APP_SHELL__ */ null;
+
 function secure(response) {
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
@@ -41,6 +43,12 @@ export default {
     const indexUrl = new URL(request.url);
     indexUrl.pathname = "/";
     indexUrl.search = "";
+    if (APP_SHELL_HTML !== null) {
+      return secure(new Response(
+        request.method === "HEAD" ? null : APP_SHELL_HTML,
+        { headers: { "Content-Type": "text/html; charset=utf-8" } },
+      ));
+    }
     return secure(await env.ASSETS.fetch(new Request(indexUrl, request)));
   },
 };

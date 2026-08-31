@@ -50,5 +50,5 @@
 - Sites project ID: `appgprj_6a958508a92c81919d2f8252caa4106e`.
 - Access check: custom owner-only policy, one allowed user, zero groups, zero external visitors.
 - Production URL: `https://at-attin.astronebulae.chatgpt.site`.
-- The first private publication exposed a real hosting detail: matching root assets bypass the Worker by default, and the original fallback fetch of `/index.html` canonicalized to `/`. Added a static `_headers` manifest and changed the Worker fallback fetch to `/`; a new build-contract assertion proves both protections are packaged.
+- Private publication exposed two real hosting details: matching root assets bypass the Worker by default, and Sites did not apply the packaged `_headers` file to that static-first response. The final build therefore keeps the public root as a harmless immediate `/login` redirect, embeds the complete app shell inside the Worker, and serves every banking route with anti-framing and restrictive browser headers. A build-contract assertion imports the emitted Worker and proves that a deep route returns the protected At Attin shell.
 - Final Sites version and deployed-origin checks will be appended after the hardened publication.
