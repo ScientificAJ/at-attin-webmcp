@@ -153,6 +153,32 @@ describe('banking invariant and validation regressions', () => {
     }, fixedClock)).toThrow(/5,000 ATC balance floor/i);
   });
 
+  it('previews and persists the effective configured and goal-backed retry floor', () => {
+    const storage = memoryStorage();
+    const store = createBankStore(storage, fixedClock);
+    expect(store.transact(0, 'configure-effective-retry-floor', (draft) => {
+      const rainy = draft.accounts.find(({ id }) => id === 'account-rainy')!;
+      rainy.balanceFloor = atc(3000);
+      const payment = draft.payments.find(({ id }) => id === 'payment-foundry-failed')!;
+      payment.sourceAccountId = rainy.id;
+      payment.balanceFloor = atc(0);
+    })).toMatchObject({ ok: true });
+
+    const retry = prepareOperation(store, 'retry_failed_payment', {
+      paymentId: 'payment-foundry-failed',
+      balanceFloorMinor: atc(500),
+    }, fixedClock);
+    expect(retry.commit()).toMatchObject({ ok: true });
+
+    expect.soft(retry.consequences).toContain('Balance floor: 3,000 ATC');
+    expect.soft(store.getState().payments.find(
+      ({ id }) => id === 'payment-foundry-failed',
+    )).toMatchObject({ balanceFloor: atc(3000), balanceFloorStatus: 'confirmed' });
+    expect(createBankStore(storage, fixedClock).getState().payments.find(
+      ({ id }) => id === 'payment-foundry-failed',
+    )).toMatchObject({ balanceFloor: atc(3000), balanceFloorStatus: 'confirmed' });
+  });
+
   it('fails closed when legacy actionable payment floors are unknown and reloads stably', () => {
     const legacy = createSeedState(fixedClock());
     for (const payment of legacy.payments) {

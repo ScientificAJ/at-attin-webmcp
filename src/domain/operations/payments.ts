@@ -375,7 +375,7 @@ function prepareRetry(context: OperationContext): OperationPlan {
   if (effectiveFloor === null) {
     throw new Error('Explicitly reconfirm a valid balance floor before retrying this payment');
   }
-  floorAfter(
+  const { floor } = floorAfter(
     source,
     payment.amount,
     effectiveFloor,
@@ -389,7 +389,7 @@ function prepareRetry(context: OperationContext): OperationPlan {
     consequences: [
       `Retry ${formatATC(payment.amount)}${payee ? ` to ${payee.name}` : ''}`,
       `Balance after: ${formatATC(subtractATC(source.balance, payment.amount))}`,
-      `Balance floor: ${formatATC(effectiveFloor)}`,
+      `Balance floor: ${formatATC(floor)}`,
     ],
     reducer(draft) {
       const mutableSource = mutableAccount(draft, source.id);
@@ -399,7 +399,7 @@ function prepareRetry(context: OperationContext): OperationPlan {
         payment.amount,
       );
       const mutable = mutablePayment(draft, payment.id);
-      mutable.balanceFloor = effectiveFloor;
+      mutable.balanceFloor = floor;
       mutable.balanceFloorStatus = 'confirmed';
       mutable.status = 'completed';
       draft.transactions.push({
