@@ -1,0 +1,58 @@
+# At Attin verification summary
+
+Release date: 2026-08-31
+
+Branch: `feature/at-attin-webmcp`
+
+Sites project: `At Attin`
+
+Production URL: pending final Sites publication
+
+## Automated proof
+
+| Gate | Result |
+|---|---|
+| Integrated WebMCP hero and rejection evaluations | 5/5 passed |
+| Complete unit and integration suite | 133/133 passed across 9 files |
+| ESLint | Passed with no findings |
+| TypeScript and production build | Passed; 4,755 modules transformed and all Sites artifacts emitted |
+| Sites Worker contract | Passed, including direct routing and security-header checks |
+
+The WebMCP evaluation suite proves a confirmed spending read with no banking-state mutation, the exact monthly 1,250 ATC Orbit Works recurrence with a persisted 5,000 ATC floor, atomic suspicious-charge protection with typed uppercase `YES`, closed-schema rejection without protected output, and fail-closed untrusted activation, abort, and stale-state behavior.
+
+## Native WebMCP contract proof
+
+- Exact inventory: 56 imperative descriptors plus four declarative forms.
+- Production registration path: native `document.modelContext.registerTool(tool, { signal })`.
+- Lifecycle: nothing registers while signed out or locked; lock, logout, teardown, and partial registration failure abort the owning generation.
+- Authorization: every read and mutation waits on the app-owned confirmation coordinator.
+- Critical actions: trusted activation plus uppercase `YES`.
+- Output: compact JSON below 1,500 characters; protected free-form reads carry `untrustedContentHint`.
+- Fakes are test-only and are not shipped as a browser agent or deterministic execution engine.
+
+The selected Codex in-app browser did not expose `document.modelContext`, so a live `getTools()` call was not available in that browser build. The product reported **WebMCP unavailable** and manual banking remained fully usable. The 56-tool native lifecycle, four form annotations, callbacks, cancellation, audit, and three hero flows were exercised against the production bridge and a test-only `ModelContextFake`.
+
+## Product and accessibility proof
+
+- Five approved references compared to matching live routes at 1487 × 1058.
+- Compact 390 × 844, tablet 834 × 1194, and 200% zoom-equivalent layouts checked without horizontal overflow.
+- Primary routes and manual interactions checked in the selected browser with no console errors.
+- Keyboard focus, visible cancel, focus trap/restoration, live announcements, large text, high contrast, and reduced motion covered.
+- `design-qa.md` records zero open P0/P1/P2 findings and a passed final result.
+
+## Direct security review
+
+A complete release-branch diff scan reviewed 102 inventory rows plus the supporting Sites Worker response path. The authorization, disclosure, native lifecycle, schema, atomic persistence, output, and untrusted-content controls produced no surviving issue.
+
+One low-severity deployment weakness was validated before release: the new trusted-click confirmation UI could be framed because the template Worker did not set repository-owned anti-clickjacking headers. A focused Worker assertion failed first. The release now adds `Content-Security-Policy` with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and a restrictive Permissions Policy; the same focused test then passed. The issue is closed before publication.
+
+## Release boundary
+
+- ATC is fictional, local, and has no cash value.
+- Credentials are intentionally hard-coded for one hackathon user.
+- No bank rails, hosted model, built-in assistant, parser, API key, analytics SDK, or autonomous background execution exists.
+- The prototype demonstrates interaction and safety architecture; it does not claim production banking, privacy, accessibility, regulatory, or security certification.
+
+## Deployment proof
+
+Final Sites version, deployment status, direct-route check, and deployed-origin read/mutation evidence will be recorded after publication.

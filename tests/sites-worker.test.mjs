@@ -41,6 +41,31 @@ test("falls back to index.html for an unknown app route", async () => {
   assert.deepEqual(calls, ["/flow/step-two?source=share", "/index.html"]);
 });
 
+test("adds browser security headers to prevent confirmation clickjacking", async () => {
+  const response = await worker.fetch(
+    new Request("https://example.test/settings/agent", {
+      headers: { accept: "text/html" },
+    }),
+    {
+      ASSETS: {
+        fetch: async (request) => new Response(
+          new URL(request.url).pathname === "/index.html" ? "app" : "missing",
+          { status: new URL(request.url).pathname === "/index.html" ? 200 : 404 },
+        ),
+      },
+    },
+  );
+
+  assert.match(
+    response.headers.get("content-security-policy") ?? "",
+    /frame-ancestors 'none'/,
+  );
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  assert.match(response.headers.get("permissions-policy") ?? "", /payment=\(\)/);
+});
+
 test("does not turn missing API or write requests into the app shell", async () => {
   for (const request of [
     new Request("https://example.test/api/missing", { headers: { accept: "application/json" } }),
