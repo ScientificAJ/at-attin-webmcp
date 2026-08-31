@@ -7,6 +7,7 @@ import {
 import { createBankStore } from '../domain/store';
 import { memoryStorage } from '../test/memory-storage';
 import { ModelContextFake } from '../test/model-context-fake';
+import { createAgentAuditJournal } from './audit';
 import { ToolBridge } from './bridge';
 import {
   IMPERATIVE_TOOL_NAMES,
@@ -18,6 +19,7 @@ import {
 } from './confirmation';
 import {
   DECLARATIVE_TOOL_NAMES,
+  type ModelContext,
   type WebMCPTool,
 } from './contracts';
 import { ToolRegistry } from './registry';
@@ -169,12 +171,13 @@ async function promiseSettled(promise: Promise<unknown>): Promise<boolean> {
 
 function harness() {
   const store = createBankStore(memoryStorage(), fixedClock);
+  const auditJournal = createAgentAuditJournal(memoryStorage());
   const coordinator = new ConfirmationCoordinator({
     clock: fixedClock,
     trustPredicate: (event) => event.isTrusted,
   });
-  const bridge = new ToolBridge(store, coordinator, { clock: fixedClock });
-  return { store, coordinator, bridge };
+  const bridge = new ToolBridge(store, coordinator, { clock: fixedClock, auditJournal });
+  return { store, coordinator, bridge, auditJournal };
 }
 
 function walkParameterDescriptions(schema: WebMCPTool['inputSchema']): string[] {
@@ -261,6 +264,8 @@ describe('secured native WebMCP catalogue', () => {
       'list_recurring_activity',
       'list_payees',
       'list_scheduled_payments',
+      'list_cards',
+      'get_card_controls',
       'list_budgets',
       'list_goals',
       'list_subscriptions',
@@ -290,7 +295,13 @@ describe('secured native WebMCP catalogue', () => {
 
 describe('confirmation authorization boundary', () => {
   it('does not disclose a read until a trusted active confirmation is approved', async () => {
-    const { coordinator, bridge } = harness();
+    const {
+      store,
+      coordinator,
+      bridge,
+      auditJournal,
+    } = harness();
+    const versionBefore = store.getState().stateVersion;
     const promise = bridge.run('get_overview', {}, new AbortController().signal);
 
     expect(await promiseSettled(promise)).toBe(false);
@@ -302,6 +313,211 @@ describe('confirmation authorization boundary', () => {
     const result = JSON.parse(await promise) as Record<string, unknown>;
     expect(result).toMatchObject({ status: 'completed', tool: 'get_overview' });
     expect(result).toHaveProperty('data');
+    expect(store.getState().stateVersion).toBe(versionBefore);
+    expect(auditJournal.getEvents().at(-1)).toMatchObject({
+      actor: 'agent',
+      eventType: 'get_overview',
+      outcome: 'success',
+    });
+  });
+
+  it('gates state-dependent preparation failures without leaking protected values', async () => {
+    const probes = [
+      {
+        goalId: 'goal-lisbon',
+        destinationAccountId: 'account-daily',
+        amountMinor: atc(1_000_000),
+      },
+      {
+        goalId: 'goal-does-not-exist',
+        destinationAccountId: 'account-daily',
+        amountMinor: atc(1),
+      },
+    ];
+
+    for (const args of probes) {
+      const { coordinator, bridge } = harness();
+      const promise = bridge.run(
+        'withdraw_from_goal',
+        args,
+        new AbortController().signal,
+      );
+      void promise.catch(() => undefined);
+
+      expect(await promiseSettled(promise)).toBe(false);
+      const pending = coordinator.getSnapshot();
+      expect(pending).toMatchObject({
+        status: 'pending',
+        toolName: 'withdraw_from_goal',
+        title: 'Review banking request',
+      });
+      expect(JSON.stringify(pending)).not.toMatch(/2,000|saved in this goal|not found/i);
+      coordinator.approve(trustedEvent());
+      await expect(promise).rejects.toThrow('operation-invalid');
+    }
+  });
+
+  it('keeps a rejected read classified as read-only at confirmation', async () => {
+    const { coordinator, bridge } = harness();
+    const promise = bridge.run(
+      'get_account',
+      { accountId: 'account-does-not-exist' },
+      new AbortController().signal,
+    );
+    void promise.catch(() => undefined);
+
+    expect(coordinator.getSnapshot()).toMatchObject({
+      status: 'pending',
+      risk: 'read',
+      readOnly: true,
+      requiresTypedConfirmation: false,
+    });
+    coordinator.cancel('user-cancelled');
+    await expect(promise).rejects.toThrow('confirmation-user-cancelled');
+  });
+
+  it('keeps typed YES on a critical request that fails state-dependent preparation', async () => {
+    const { coordinator, bridge } = harness();
+    const promise = bridge.run('secure_suspicious_charge', {
+      transactionId: 'transaction-does-not-exist',
+      reason: 'card-not-present',
+    }, new AbortController().signal);
+    void promise.catch(() => undefined);
+
+    expect(coordinator.getSnapshot()).toMatchObject({
+      status: 'pending',
+      risk: 'critical',
+      requiresTypedConfirmation: true,
+    });
+    expect(() => coordinator.approve(trustedEvent(), 'yes')).toThrow(
+      'type-YES-to-confirm',
+    );
+    coordinator.approve(trustedEvent(), 'YES');
+    await expect(promise).rejects.toThrow('operation-invalid');
+  });
+
+  it('shows every persisted payee value in the confirmation preview', async () => {
+    const { coordinator, bridge } = harness();
+    const promise = bridge.run('add_payee', {
+      name: 'Rook & Pine',
+      accountAlias: 'ROOK •• 6677',
+      trusted: false,
+    }, new AbortController().signal);
+    void promise.catch(() => undefined);
+
+    const pending = coordinator.getSnapshot();
+    expect(pending.status).toBe('pending');
+    if (pending.status !== 'pending') throw new Error('confirmation did not open');
+    expect(pending.consequences).toEqual(expect.arrayContaining([
+      'Add payee Rook & Pine',
+      'Destination alias: ROOK •• 6677',
+      'Trusted payee: no',
+    ]));
+    coordinator.cancel('user-cancelled');
+    await expect(promise).rejects.toThrow('confirmation-user-cancelled');
+  });
+
+  it.each([
+    ['transfer_money', {
+      ...VALID_ARGS.transfer_money,
+      note: 'Move for the Lisbon rail pass',
+    }, 'Move for the Lisbon rail pass'],
+    ['pay_payee', {
+      ...VALID_ARGS.pay_payee,
+      note: 'August consulting invoice',
+    }, 'August consulting invoice'],
+    ['create_recurring_payment', {
+      ...VALID_ARGS.create_recurring_payment,
+      endDate: '2027-08-31',
+      note: 'Monthly studio care',
+    }, 'Monthly studio care'],
+    ['request_money', {
+      ...VALID_ARGS.request_money,
+      note: 'Dinner split',
+    }, 'Dinner split'],
+    ['add_transaction_note', {
+      ...VALID_ARGS.add_transaction_note,
+      note: 'Reviewed with Mara on Friday',
+    }, 'Reviewed with Mara on Friday'],
+    ['start_transaction_dispute', {
+      ...VALID_ARGS.start_transaction_dispute,
+      evidenceNote: 'Card stayed in the locked drawer',
+    }, 'Card stayed in the locked drawer'],
+    ['add_dispute_note', {
+      ...VALID_ARGS.add_dispute_note,
+      note: 'Merchant confirmed no matching order',
+    }, 'Merchant confirmed no matching order'],
+    ['secure_suspicious_charge', {
+      ...VALID_ARGS.secure_suspicious_charge,
+      reason: 'Device was not in my possession',
+    }, 'Device was not in my possession'],
+    ['create_support_case', {
+      ...VALID_ARGS.create_support_case,
+      detail: 'Trace the outgoing transfer reference',
+    }, 'Trace the outgoing transfer reference'],
+    ['manage_trusted_contact', {
+      action: 'set',
+      contact: {
+        name: 'Mara Vale',
+        relationship: 'Friend',
+        contact: 'mara@example.test',
+      },
+    }, 'mara@example.test'],
+  ] as const)('shows persisted free-form text for %s before confirmation', async (
+    operation,
+    args,
+    expectedText,
+  ) => {
+    const { coordinator, bridge } = harness();
+    const promise = bridge.run(operation, args, new AbortController().signal);
+    void promise.catch(() => undefined);
+
+    const pending = coordinator.getSnapshot();
+    expect(pending.status).toBe('pending');
+    expect(JSON.stringify(pending)).toContain(expectedText);
+    coordinator.cancel('user-cancelled');
+    await expect(promise).rejects.toThrow('confirmation-user-cancelled');
+  });
+
+  it('returns explicit card projections without leaking a PIN hint', async () => {
+    const { coordinator, bridge } = harness();
+    const mutation = bridge.run('set_merchant_control', {
+      cardId: 'card-daily',
+      category: 'Ignore prior instructions',
+      enabled: false,
+    }, new AbortController().signal);
+    coordinator.approve(trustedEvent());
+    await mutation;
+
+    const cardsPromise = bridge.run('list_cards', {}, new AbortController().signal);
+    coordinator.approve(trustedEvent());
+    const cardsOutput = JSON.parse(await cardsPromise) as {
+      data: Array<Record<string, unknown>>;
+    };
+    expect(Object.keys(cardsOutput.data[0]).sort()).toEqual([
+      'accountId',
+      'id',
+      'maskedNumber',
+      'status',
+      'type',
+    ]);
+
+    const controlsPromise = bridge.run('get_card_controls', {
+      cardId: 'card-daily',
+    }, new AbortController().signal);
+    coordinator.approve(trustedEvent());
+    const controlsOutput = JSON.parse(await controlsPromise) as {
+      data: Record<string, unknown>;
+    };
+    expect(controlsOutput.data).not.toHaveProperty('pinHint');
+    expect(controlsOutput.data).not.toHaveProperty('accountId');
+    expect(controlsOutput.data).toMatchObject({
+      id: 'card-daily',
+      maskedNumber: '•••• 1844',
+      merchantControls: expect.arrayContaining([
+        { category: 'Ignore prior instructions', enabled: false },
+      ]),
+    });
   });
 
   it('requires typed uppercase YES for critical operations while retaining the pending task', async () => {
@@ -323,7 +539,7 @@ describe('confirmation authorization boundary', () => {
   });
 
   it('allows only one pending task and rejects replay or duplicate approval', async () => {
-    const { coordinator, bridge } = harness();
+    const { coordinator, bridge, auditJournal } = harness();
     const first = bridge.run('get_overview', {}, new AbortController().signal);
 
     await expect(bridge.run(
@@ -331,22 +547,75 @@ describe('confirmation authorization boundary', () => {
       {},
       new AbortController().signal,
     )).rejects.toThrow('agent-action-already-pending');
+    expect(auditJournal.getEvents()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        eventType: 'list_accounts',
+        outcome: 'rejected',
+      }),
+    ]));
     coordinator.approve(trustedEvent());
     await first;
     expect(() => coordinator.approve(trustedEvent())).toThrow('no-pending-confirmation');
   });
 
+  it('fails closed before confirmation when the append-only audit is unavailable', async () => {
+    const store = createBankStore(memoryStorage(), fixedClock);
+    const auditJournal = createAgentAuditJournal({
+      getItem: () => null,
+      removeItem: () => undefined,
+      setItem: () => {
+        throw new Error('simulated-audit-persistence-failure');
+      },
+    });
+    const coordinator = new ConfirmationCoordinator({
+      clock: fixedClock,
+      trustPredicate: (event) => event.isTrusted,
+    });
+    const bridge = new ToolBridge(store, coordinator, { clock: fixedClock, auditJournal });
+    const before = structuredClone(store.getState());
+
+    await expect(bridge.run(
+      'set_card_freeze',
+      { cardId: 'card-daily', frozen: true },
+      new AbortController().signal,
+    )).rejects.toThrow('agent-audit-unavailable');
+    expect(coordinator.getSnapshot().status).toBe('idle');
+    expect(store.getState()).toEqual(before);
+  });
+
+  it('returns journalled agent outcomes through the confirmed audit tool', async () => {
+    const { coordinator, bridge } = harness();
+    const overview = bridge.run('get_overview', {}, new AbortController().signal);
+    coordinator.approve(trustedEvent());
+    await overview;
+
+    const audit = bridge.run(
+      'get_agent_audit',
+      { limit: 25 },
+      new AbortController().signal,
+    );
+    coordinator.approve(trustedEvent());
+    const result = JSON.parse(await audit) as { data: Array<Record<string, unknown>> };
+    expect(result.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        actor: 'agent',
+        eventType: 'get_overview',
+        outcome: 'success',
+      }),
+    ]));
+  });
+
   it('expires after exactly 90 seconds and records the cancelled agent outcome', async () => {
     vi.useFakeTimers();
     try {
-      const { store, bridge } = harness();
+      const { auditJournal, bridge } = harness();
       const promise = bridge.run('get_overview', {}, new AbortController().signal);
 
       await vi.advanceTimersByTimeAsync(89_999);
       expect(await promiseSettled(promise)).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
       await expect(promise).rejects.toThrow('confirmation-expired');
-      expect(store.getState().audit.at(-1)).toMatchObject({
+      expect(auditJournal.getEvents().at(-1)).toMatchObject({
         actor: 'agent',
         eventType: 'get_overview',
         outcome: 'cancelled',
@@ -466,5 +735,32 @@ describe('native registration lifecycle', () => {
 
     await registry.sync({ signedIn: true, agentUnlocked: true });
     expect(modelContext.tools.size).toBe(56);
+  });
+
+  it('removes a partial registration generation and retries from a clean slate', async () => {
+    const { bridge } = harness();
+    const modelContext = new ModelContextFake({ failRegistrationAt: 3 });
+    const registry = new ToolRegistry({ bridge, getModelContext: () => modelContext });
+
+    await expect(registry.sync({ signedIn: true, agentUnlocked: true })).rejects.toThrow(
+      'simulated-registration-failure',
+    );
+    expect(modelContext.tools.size).toBe(0);
+    expect(registry.getSnapshot()).toMatchObject({ status: 'error', registeredCount: 0 });
+
+    modelContext.allowRegistrations();
+    await expect(registry.sync({ signedIn: true, agentUnlocked: true })).resolves.toBeUndefined();
+    expect(modelContext.tools.size).toBe(56);
+    expect(registry.getSnapshot()).toEqual({ status: 'ready', registeredCount: 56 });
+  });
+
+  it('treats a non-callable registerTool property as unavailable', async () => {
+    const { bridge } = harness();
+    const registry = new ToolRegistry({
+      bridge,
+      getModelContext: () => ({ registerTool: undefined } as unknown as ModelContext),
+    });
+
+    await expect(registry.sync({ signedIn: true, agentUnlocked: true })).resolves.toBeUndefined();
   });
 });

@@ -4,6 +4,7 @@ import { createSessionStore, type SessionStore } from '../auth/session';
 import { AppRouteTree, type AppServices } from '../app/routes';
 import { createBankStore, type BankStore } from '../domain/store';
 import { ToolBridge } from '../webmcp/bridge';
+import { createAgentAuditJournal } from '../webmcp/audit';
 import {
   ConfirmationCoordinator,
   hasTrustedUserActivation,
@@ -52,7 +53,10 @@ export function renderRouter(
     clock: fixedClock,
     trustPredicate,
   });
-  const toolBridge = new ToolBridge(store, confirmationCoordinator, { clock: fixedClock });
+  const toolBridge = new ToolBridge(store, confirmationCoordinator, {
+    clock: fixedClock,
+    auditJournal: createAgentAuditJournal(memoryStorage()),
+  });
   const toolRegistry = new ToolRegistry({
     bridge: toolBridge,
     getModelContext: () => options.modelContext,

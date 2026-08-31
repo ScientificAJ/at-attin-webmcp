@@ -51,6 +51,7 @@ function prepareDispute(context: OperationContext): OperationPlan {
     consequences: [
       `Open a dispute for ${formatATC(transaction.amount)} at ${transaction.merchant}`,
       `Reason: ${reason}`,
+      ...(evidenceNote ? [`Evidence note: ${evidenceNote}`] : []),
       'The transaction is not automatically refunded',
     ],
     data: { disputeId },
@@ -83,7 +84,10 @@ function prepareDisputeNote(context: OperationContext): OperationPlan {
     title: 'Add dispute evidence note',
     risk: 'medium',
     disclosure: [],
-    consequences: ['Append the supplied note to the open dispute'],
+    consequences: [
+      'Append the supplied note to the open dispute',
+      `Evidence note: ${note}`,
+    ],
     reducer(draft) {
       const mutable = draft.disputes.find(({ id }) => id === dispute.id);
       if (!mutable) throw new Error('Prepared dispute is no longer available');
@@ -117,6 +121,7 @@ function prepareSuspiciousCharge(context: OperationContext): OperationPlan {
       `Freeze ${account.name} card ending ${card.maskedNumber.slice(-4)}`,
       'Open a dispute for the suspicious transaction',
       `Disputed amount: ${formatATC(transaction.amount)}`,
+      `Reason: ${reason}`,
       'Both safeguards happen together or neither happens',
     ],
     data: { cardId: card.id, disputeId, transactionId: transaction.id },
@@ -149,7 +154,11 @@ function prepareSupportCase(context: OperationContext): OperationPlan {
     title: `Open ${topic} support case`,
     risk: 'medium',
     disclosure: [],
-    consequences: ['Create one fictional in-app support case', 'No information leaves this device'],
+    consequences: [
+      'Create one fictional in-app support case',
+      `Case detail: ${detail}`,
+      'No information leaves this device',
+    ],
     data: { supportCaseId: caseId },
     reducer(draft) {
       draft.supportCases.push({

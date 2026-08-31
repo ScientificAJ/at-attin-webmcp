@@ -30,6 +30,12 @@ const fields = [
   },
 ] as const;
 
+function webMcpEvent(type: 'toolactivated' | 'toolcancel', toolName: string): Event {
+  const event = new Event(type);
+  Object.defineProperty(event, 'toolName', { value: toolName });
+  return event;
+}
+
 describe('DeclarativeToolForm', () => {
   it('stays visible and manually usable while locked without exposing annotations', async () => {
     const user = userEvent.setup();
@@ -128,7 +134,7 @@ describe('DeclarativeToolForm', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Agent tool completed');
   });
 
-  it('announces native activation and cancellation and propagates toolcancel', async () => {
+  it('handles matching native activation and cancellation events from window', async () => {
     const { bridge, coordinator } = createWebMcpTestHarness();
     render(
       <DeclarativeToolForm
@@ -142,6 +148,11 @@ describe('DeclarativeToolForm', () => {
       />,
     );
     const form = screen.getByRole('form', { name: 'Filter activity' });
+    fireEvent(window, webMcpEvent('toolactivated', 'choose_statement_period'));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    fireEvent(window, webMcpEvent('toolactivated', 'filter_transactions_form'));
+    expect(screen.getByRole('status')).toHaveTextContent('Agent tool activated');
+
     const respondWith = vi.fn();
     const submit = new Event('submit', { bubbles: true, cancelable: true }) as SubmitEvent;
     Object.defineProperties(submit, {
@@ -151,9 +162,9 @@ describe('DeclarativeToolForm', () => {
     fireEvent(form, submit);
     const response = respondWith.mock.calls[0][0] as Promise<string>;
 
-    fireEvent(form, new Event('toolactivated'));
-    expect(screen.getByRole('status')).toHaveTextContent('Agent tool activated');
-    fireEvent(form, new Event('toolcancel'));
+    fireEvent(window, webMcpEvent('toolcancel', 'choose_statement_period'));
+    expect(coordinator.getSnapshot().status).toBe('pending');
+    fireEvent(window, webMcpEvent('toolcancel', 'filter_transactions_form'));
     await act(async () => {
       await expect(response).rejects.toThrow('confirmation-tool-cancel');
     });

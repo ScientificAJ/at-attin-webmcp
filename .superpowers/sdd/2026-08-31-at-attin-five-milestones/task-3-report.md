@@ -297,3 +297,61 @@ behavior is verified with the contract-faithful fake; absence leaves all manual
 banking functional and visibly reports WebMCP unavailable. The full
 reference-by-reference visual comparison and pixel-level polish remain the
 explicit scope of Milestones 4 and 5.
+
+## Post-review security hardening
+
+The independent review of commit `365f20e` identified one Critical disclosure
+boundary defect and four Important lifecycle/audit/preview defects. Per the
+user's revised execution direction, the controller completed one direct,
+test-first repair pass with no additional agents or repeated review loop.
+
+### RED evidence
+
+- The first focused regression run failed seven assertions: protected
+  state-dependent preparation returned before confirmation, payee destination
+  data was omitted, card projections leaked undeclared fields and `pinHint`,
+  card reads lacked untrusted-content annotations, window-level declarative
+  cancellation was ignored, partial native registration remained exposed, and
+  a non-callable native method threw.
+- The append-only audit slice then failed at import because `src/webmcp/audit.ts`
+  did not exist.
+- The exact-preview slice failed eleven assertions covering typed `YES` on a
+  rejected critical request and ten persisted free-form values omitted from the
+  confirmation sheet.
+- The shell status regression failed because a native registration error still
+  rendered `WebMCP connected`.
+- The rejected-read classification regression failed because a failed read was
+  presented as a state-changing high-risk action.
+
+### Fixes
+
+- State-dependent domain preparation failures now become a generic app-owned
+  confirmable result. No balance, existence, eligibility, or other protected
+  state is returned before confirmation; critical operations retain typed
+  uppercase `YES`, and failed reads remain read-only.
+- A separate append-only, device-local WebMCP audit journal records attempts
+  without changing the bank authorization version. It writes before opening
+  confirmation, fails closed if unavailable, records mutex/schema/cancellation
+  outcomes, persists safe final events, and merges them into confirmed audit
+  reads. Successful reads therefore remain genuinely read-only.
+- A failed native registration aborts its entire partial generation, clears the
+  controller, exposes an error state, and can retry to all 56 tools from a clean
+  generation. The registry itself checks that `registerTool` is callable, and
+  UI callers consume rejected registration promises.
+- Declarative `toolactivated` and `toolcancel` events are handled on `window`,
+  filtered by `toolName`, and no undocumented declarative submit signal is
+  assumed.
+- Card reads use explicit safe projections. `pinHint` and undeclared controls
+  no longer leak from summaries; card-control content is marked untrusted.
+- Confirmation previews now show destination aliases and every persisted
+  free-form note, reason, support detail, evidence item, and contact value.
+
+### Final fix-pass evidence
+
+- Focused WebMCP/UI gate: 2 files, 37 tests passed.
+- Full suite: 7 files, 117 tests passed.
+- Lint: exit 0.
+- Production/Sites build: exit 0, 4,720 modules transformed, all Sites
+  artifacts emitted.
+- Sites worker: 1 test passed.
+- `git diff --check`: clean.

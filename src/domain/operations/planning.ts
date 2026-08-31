@@ -307,7 +307,10 @@ function prepareNote(context: OperationContext): OperationPlan {
     title: `Add note to ${transaction.merchant} transaction`,
     risk: 'low',
     disclosure: [],
-    consequences: ['Replace the transaction note with the supplied text'],
+    consequences: [
+      'Replace the transaction note with the supplied text',
+      `New note: ${note}`,
+    ],
     reducer(draft) {
       mutableTransaction(draft, transaction.id).memo = note;
       appendAudit(draft, context, transaction.id, 'Transaction note updated.');

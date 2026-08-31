@@ -195,16 +195,51 @@ export function selectScheduledPayments(state: Readonly<BankState>): Payment[] {
   return copy(state.payments.filter(({ status }) => ['scheduled', 'paused'].includes(status)));
 }
 
-export function selectCards(state: Readonly<BankState>): Card[] {
-  return copy(state.cards);
+export type CardSummaryProjection = Pick<
+  Card,
+  'id' | 'accountId' | 'maskedNumber' | 'type' | 'status'
+>;
+
+export type CardControlsProjection = Pick<
+  Card,
+  | 'id'
+  | 'maskedNumber'
+  | 'status'
+  | 'limit'
+  | 'merchantControls'
+  | 'onlinePayments'
+  | 'contactless'
+  | 'travelMode'
+>;
+
+export function selectCards(state: Readonly<BankState>): CardSummaryProjection[] {
+  return state.cards.map((card) => ({
+    id: card.id,
+    accountId: card.accountId,
+    maskedNumber: card.maskedNumber,
+    type: card.type,
+    status: card.status,
+  }));
 }
 
-export function selectCardControls(state: Readonly<BankState>, cardId: string): Card {
+export function selectCardControls(
+  state: Readonly<BankState>,
+  cardId: string,
+): CardControlsProjection {
   const card = state.cards.find(({ id }) => id === cardId);
   if (!card) {
     throw new Error('Card was not found');
   }
-  return copy(card);
+  return {
+    id: card.id,
+    maskedNumber: card.maskedNumber,
+    status: card.status,
+    limit: card.limit,
+    merchantControls: copy(card.merchantControls),
+    onlinePayments: card.onlinePayments,
+    contactless: card.contactless,
+    travelMode: card.travelMode,
+  };
 }
 
 export function selectBudgets(state: Readonly<BankState>): Budget[] {

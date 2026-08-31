@@ -50,7 +50,9 @@ export function SettingsPage() {
       setAccessMessage(`Agent Access was not changed: ${result.code}.`);
       return;
     }
-    void toolRegistry.sync({ signedIn, agentUnlocked: next });
+    void toolRegistry.sync({ signedIn, agentUnlocked: next }).catch(() => {
+      setAccessMessage('WebMCP registration failed. Lock Agent Access and try again.');
+    });
     setAccessMessage(next
       ? 'Agent Access unlocked. Every action still needs confirmation.'
       : 'Agent Access locked. All imperative tools were removed.');
@@ -126,10 +128,16 @@ export function SettingsPage() {
           const query = typeof args.query === 'string'
             ? args.query.toLocaleLowerCase('en-US')
             : '';
-          const matches = selectAgentAudit(state, limit).filter((entry) => {
+          const matches = [
+            ...selectAgentAudit(state, limit),
+            ...toolBridge.getAuditJournal().getEvents(),
+          ]
+            .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+            .slice(0, limit)
+            .filter((entry) => {
             const searchable = `${entry.eventType} ${entry.safeDetail}`.toLocaleLowerCase('en-US');
             return (!outcome || entry.outcome === outcome) && (!query || searchable.includes(query));
-          });
+            });
           return `${matches.length} matching audit entr${matches.length === 1 ? 'y' : 'ies'}.`;
         }}
         submitLabel="Filter audit"

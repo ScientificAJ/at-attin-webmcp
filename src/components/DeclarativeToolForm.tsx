@@ -68,20 +68,25 @@ export function DeclarativeToolForm({
     : {};
 
   useEffect(() => {
-    const form = formRef.current;
-    if (!form) return undefined;
-    const activated = () => setAnnouncement('Agent tool activated. Confirm in At Attin.');
-    const cancelled = () => {
+    const isMatchingTool = (event: Event) => (
+      (event as Event & { toolName?: string }).toolName === toolName
+    );
+    const activated = (event: Event) => {
+      if (!isMatchingTool(event)) return;
+      setAnnouncement('Agent tool activated. Confirm in At Attin.');
+    };
+    const cancelled = (event: Event) => {
+      if (!isMatchingTool(event)) return;
       bridge.cancel('tool-cancel');
       setAnnouncement('Agent tool cancelled.');
     };
-    form.addEventListener('toolactivated', activated);
-    form.addEventListener('toolcancel', cancelled);
+    window.addEventListener('toolactivated', activated);
+    window.addEventListener('toolcancel', cancelled);
     return () => {
-      form.removeEventListener('toolactivated', activated);
-      form.removeEventListener('toolcancel', cancelled);
+      window.removeEventListener('toolactivated', activated);
+      window.removeEventListener('toolcancel', cancelled);
     };
-  }, [bridge]);
+  }, [bridge, toolName]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -93,7 +98,7 @@ export function DeclarativeToolForm({
         ? bridge.run(
           toolName,
           args,
-          nativeSubmit.signal ?? new AbortController().signal,
+          new AbortController().signal,
         )
         : Promise.reject(new Error('agent-access-locked'));
       nativeSubmit.respondWith?.(response);

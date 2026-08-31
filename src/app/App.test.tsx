@@ -204,7 +204,7 @@ describe('At Attin application shell', () => {
     );
   });
 
-  it('shows fictional-funds and all shell-level WebMCP availability states', () => {
+  it('shows fictional-funds and all shell-level WebMCP availability states', async () => {
     const unavailable = renderAuthenticated('/');
     expect(screen.getByText('Fictional funds · No cash value')).toBeVisible();
     expect(screen.getByText('WebMCP unavailable')).toBeVisible();
@@ -214,8 +214,20 @@ describe('At Attin application shell', () => {
     expect(screen.getByText('Agent access locked')).toBeVisible();
     locked.unmount();
 
-    renderAuthenticated('/', { webMcpAvailable: true, agentUnlocked: true });
-    expect(screen.getByText('WebMCP connected')).toBeVisible();
+    const connected = renderAuthenticated('/', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+      modelContext: new ModelContextFake(),
+    });
+    expect(await screen.findByText('WebMCP connected')).toBeVisible();
+    connected.unmount();
+
+    renderAuthenticated('/', {
+      webMcpAvailable: true,
+      agentUnlocked: true,
+      modelContext: new ModelContextFake({ failRegistrationAt: 1 }),
+    });
+    expect(await screen.findByText('WebMCP needs attention')).toBeVisible();
   });
 
   it('signs out in memory and returns protected content to login', async () => {

@@ -4,6 +4,13 @@ import type {
 } from '../webmcp/contracts';
 
 export class ModelContextFake implements ModelContext {
+  private registrationAttempt = 0;
+  private failRegistrationAt: number | null;
+
+  constructor(options: { failRegistrationAt?: number } = {}) {
+    this.failRegistrationAt = options.failRegistrationAt ?? null;
+  }
+
   readonly registrations: Array<{
     tool: WebMCPTool;
     signal: AbortSignal;
@@ -16,6 +23,10 @@ export class ModelContextFake implements ModelContext {
     options: { signal: AbortSignal },
   ): Promise<void> {
     if (options.signal.aborted) return;
+    this.registrationAttempt += 1;
+    if (this.registrationAttempt === this.failRegistrationAt) {
+      throw new Error('simulated-registration-failure');
+    }
     this.registrations.push({ tool, signal: options.signal });
     this.tools.set(tool.name, tool);
     options.signal.addEventListener('abort', () => {
@@ -23,6 +34,10 @@ export class ModelContextFake implements ModelContext {
         this.tools.delete(tool.name);
       }
     }, { once: true });
+  }
+
+  allowRegistrations(): void {
+    this.failRegistrationAt = null;
   }
 
   execute(

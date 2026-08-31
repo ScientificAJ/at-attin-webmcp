@@ -1,5 +1,6 @@
 import type { AgentAction, AuditEvent } from '../domain/models';
 import {
+  READ_OPERATION_NAMES,
   isOperationName,
   prepareOperation,
   type Clock,
@@ -14,14 +15,27 @@ import {
 } from './contracts';
 import { ConfirmationCoordinator } from './confirmation';
 import {
+  createAgentAuditJournal,
+  type AgentAuditJournal,
+} from './audit';
+import {
   validateDeclarativeArgs,
   validateToolArgs,
 } from './schemas';
 
 const MAX_OUTPUT_CHARACTERS = 1_499;
+const CRITICAL_OPERATIONS = new Set([
+  'reveal_card_pin',
+  'report_card_lost',
+  'replace_card',
+  'start_transaction_dispute',
+  'secure_suspicious_charge',
+  'manage_trusted_contact',
+]);
 
 export interface ToolBridgeOptions {
   clock?: Clock;
+  auditJournal?: AgentAuditJournal;
 }
 
 function compactValue(
@@ -129,6 +143,8 @@ function wrapRead(
 
 export class ToolBridge {
   private readonly clock: Clock;
+  private readonly auditJournal: AgentAuditJournal;
+  private rejectedAttempt = 0;
 
   constructor(
     private readonly store: BankStore,
@@ -136,6 +152,7 @@ export class ToolBridge {
     options: ToolBridgeOptions = {},
   ) {
     this.clock = options.clock ?? (() => new Date());
+    this.auditJournal = options.auditJournal ?? createAgentAuditJournal();
   }
 
   async run(
@@ -143,42 +160,99 @@ export class ToolBridge {
     args: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<string> {
-    const prepared = isOperationName(toolName)
-      ? prepareOperation(
-        this.store,
+    let prepared: ConfirmableAction | null = null;
+    try {
+      if (isOperationName(toolName)) {
+        const validated = validateToolArgs(toolName, args);
+        try {
+          prepared = prepareOperation(this.store, toolName, validated, this.clock);
+        } catch {
+          prepared = this.prepareRejectedRequest(toolName);
+        }
+        if (toolName === 'get_agent_audit' && prepared.readOnly) {
+          prepared = this.withAgentAudit(prepared, validated.limit);
+        }
+      } else if (isDeclarativeToolName(toolName)) {
+        const validated = validateDeclarativeArgs(toolName, args);
+        try {
+          prepared = this.prepareDeclarative(toolName, validated);
+        } catch {
+          prepared = this.prepareRejectedRequest(toolName);
+        }
+      }
+    } catch {
+      this.auditJournal.recordRejected(
         toolName,
-        validateToolArgs(toolName, args),
-        this.clock,
-      )
-      : isDeclarativeToolName(toolName)
-        ? this.prepareDeclarative(toolName, validateDeclarativeArgs(toolName, args))
-        : null;
+        'Request arguments were rejected by the bounded WebMCP schema.',
+        this.clock().toISOString(),
+      );
+      throw new Error('invalid-tool-arguments');
+    }
     if (!prepared) throw new Error(`Unsupported WebMCP tool: ${toolName}`);
+    let attemptId: string;
+    try {
+      attemptId = this.auditJournal.begin(prepared, this.clock().toISOString());
+    } catch {
+      throw new Error('agent-audit-unavailable');
+    }
     try {
       const result = await this.coordinator.request(prepared, signal);
       if (!result.ok) throw new Error(`operation-${result.code}`);
-      this.recordOutcome(prepared, 'completed', 'success');
+      const auditRecorded = this.auditJournal.finish(
+        attemptId,
+        'completed',
+        'success',
+        this.clock().toISOString(),
+      );
       return boundedJson({
         status: 'completed',
         tool: toolName,
         operationId: prepared.id,
         stateVersion: this.store.getState().stateVersion,
+        ...(!auditRecorded ? { auditStatus: 'pending-recovery' } : {}),
         ...(result.data === undefined ? {} : { data: result.data }),
       });
     } catch (error) {
       const message = errorMessage(error);
-      // Recording a rejected concurrent request would change the state version
-      // underneath the task that already owns the confirmation boundary.
-      if (message !== 'agent-action-already-pending') {
-        const { actionStatus, auditOutcome } = outcomeFor(message);
-        this.recordOutcome(prepared, actionStatus, auditOutcome);
-      }
+      const { actionStatus, auditOutcome } = outcomeFor(message);
+      this.auditJournal.finish(
+        attemptId,
+        actionStatus,
+        auditOutcome,
+        this.clock().toISOString(),
+      );
       throw error;
     }
   }
 
   cancel(reason: ConfirmationCancelReason): void {
     this.coordinator.cancel(reason);
+  }
+
+  getAuditJournal(): AgentAuditJournal {
+    return this.auditJournal;
+  }
+
+  private prepareRejectedRequest(toolName: string): ConfirmableAction {
+    const version = this.store.getState().stateVersion;
+    const critical = CRITICAL_OPERATIONS.has(toolName);
+    const readOnly = (READ_OPERATION_NAMES as readonly string[]).includes(toolName)
+      || isDeclarativeToolName(toolName);
+    this.rejectedAttempt += 1;
+    const suffix = `${this.clock().getTime()}-${this.rejectedAttempt}`;
+    return {
+      id: `prepared-rejected-${suffix}`,
+      operation: toolName,
+      title: 'Review banking request',
+      risk: critical ? 'critical' : readOnly ? 'read' : 'high',
+      readOnly,
+      requiresTypedConfirmation: critical,
+      disclosure: ['Whether the requested banking action can proceed.'],
+      consequences: ['No banking state will change if the request is invalid.'],
+      expectedVersion: version,
+      idempotencyKey: `rejected-webmcp-request-${suffix}`,
+      commit: () => ({ ok: false, code: 'invalid' }),
+    };
   }
 
   private prepareDeclarative(
@@ -254,9 +328,11 @@ export class ToolBridge {
         };
       }
       case 'filter_agent_audit': {
-        const prepared = prepareOperation(this.store, 'get_agent_audit', {
-          limit: args.limit ?? 50,
-        }, this.clock);
+        const limit = typeof args.limit === 'number' ? args.limit : 50;
+        const prepared = this.withAgentAudit(
+          prepareOperation(this.store, 'get_agent_audit', { limit }, this.clock),
+          limit,
+        );
         const outcome = args.outcome;
         const query = typeof args.query === 'string'
           ? args.query.toLocaleLowerCase('en-US')
@@ -281,41 +357,26 @@ export class ToolBridge {
     }
   }
 
-  private recordOutcome(
+  private withAgentAudit(
     prepared: ConfirmableAction,
-    status: AgentAction['status'],
-    auditOutcome: AuditEvent['outcome'],
-  ): void {
-    const now = this.clock().toISOString();
-    const idempotencyKey = `webmcp-audit-${prepared.id}-${status}`;
-    this.store.transact(
-      this.store.getState().stateVersion,
-      idempotencyKey,
-      (draft) => {
-        const completed = status === 'completed';
-        draft.agentActions.push({
-          id: `agent-${prepared.id}-${status}`,
-          tool: prepared.operation,
-          argumentsDigest: prepared.id.replace(/^prepared-/, ''),
-          riskLevel: prepared.risk,
-          preview: [...prepared.disclosure, ...prepared.consequences],
-          status,
-          createdAt: now,
-          confirmedAt: completed ? now : null,
-          completedAt: completed ? now : null,
-        });
-        draft.audit.push({
-          id: `audit-agent-${prepared.id}-${status}`,
-          actor: 'agent',
-          eventType: prepared.operation,
-          target: prepared.id,
-          outcome: auditOutcome,
-          timestamp: now,
-          safeDetail: completed
-            ? 'At Attin confirmation completed the prepared action.'
-            : `Prepared action ended: ${status}.`,
-        });
+    rawLimit: unknown,
+  ): ConfirmableAction {
+    const limit = typeof rawLimit === 'number'
+      ? Math.min(Math.max(rawLimit, 1), 100)
+      : 50;
+    return {
+      ...prepared,
+      commit: () => {
+        const result = prepared.commit();
+        if (!result.ok) return result;
+        const domainEvents = Array.isArray(result.data)
+          ? result.data as AuditEvent[]
+          : [];
+        const events = [...domainEvents, ...this.auditJournal.getEvents()]
+          .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+          .slice(0, limit);
+        return { ...result, data: events };
       },
-    );
+    };
   }
 }

@@ -109,6 +109,7 @@ function prepareTransfer(context: OperationContext): OperationPlan {
       `${source.name} balance after: ${formatATC(after)}`,
       `${destination.name} balance after: ${formatATC(destinationAfter)}`,
       `Balance floor: ${formatATC(floor)}`,
+      ...(note ? [`Note: ${note}`] : []),
     ],
     reducer(draft) {
       const mutableSource = mutableAccount(draft, source.id);
@@ -174,6 +175,7 @@ function preparePayPayee(context: OperationContext): OperationPlan {
       `From: ${source.name}`,
       `Balance after: ${formatATC(after)}`,
       `Balance floor: ${formatATC(floor)}`,
+      ...(note ? [`Note: ${note}`] : []),
     ],
     reducer(draft) {
       const mutableSource = mutableAccount(draft, source.id);
@@ -232,7 +234,11 @@ function prepareSchedule(context: OperationContext, recurring: boolean): Operati
       `${recurring ? 'Recurring payment' : 'Payment'}: ${formatATC(amount)} to ${payee.name}`,
       `First payment: ${displayDate(date)}`,
       ...(paymentRecurrence ? [`Cadence: ${paymentRecurrence.frequency}`] : []),
+      ...(paymentRecurrence?.endDate
+        ? [`Ends: ${displayDate(paymentRecurrence.endDate)}`]
+        : []),
       `Balance floor: ${formatATC(floor)}`,
+      ...(note ? [`Note: ${note}`] : []),
       'No balance changes until the payment date',
     ],
     reducer(draft) {
@@ -429,7 +435,11 @@ function prepareRequestMoney(context: OperationContext): OperationPlan {
     title: `Request money from ${from}`,
     risk: 'low',
     disclosure: [],
-    consequences: [`Request ${formatATC(amount)} from ${from}`, 'No funds move automatically'],
+    consequences: [
+      `Request ${formatATC(amount)} from ${from}`,
+      ...(note ? [`Note: ${note}`] : []),
+      'No funds move automatically',
+    ],
     reducer(draft) {
       draft.payments.push({
         id: paymentId,
@@ -463,7 +473,11 @@ function prepareAddPayee(context: OperationContext): OperationPlan {
     title: `Add ${name} as a payee`,
     risk: 'medium',
     disclosure: [],
-    consequences: [`Add payee ${name}`, `Trusted payee: ${trusted ? 'yes' : 'no'}`],
+    consequences: [
+      `Add payee ${name}`,
+      `Destination alias: ${accountAlias}`,
+      `Trusted payee: ${trusted ? 'yes' : 'no'}`,
+    ],
     reducer(draft) {
       draft.payees.push({ id, name, accountAlias, trusted, lastPaidDate: null });
       appendAudit(draft, context, id, `Payee ${name} added.`);

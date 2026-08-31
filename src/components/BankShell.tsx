@@ -4,7 +4,7 @@ import {
   LockKey,
   Target,
 } from '@phosphor-icons/react';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import {
   useAppServices,
@@ -30,6 +30,11 @@ export function BankShell() {
     webMcpAvailable,
   } = useAppServices();
   const state = useBankState();
+  const registrySnapshot = useSyncExternalStore(
+    toolRegistry.subscribe,
+    toolRegistry.getSnapshot,
+    toolRegistry.getSnapshot,
+  );
   const { accessibility, agentAccessUnlocked } = state.user.preferences;
 
   useEffect(() => {
@@ -46,11 +51,11 @@ export function BankShell() {
     void toolRegistry.sync({
       signedIn: session.isSignedIn(),
       agentUnlocked: agentAccessUnlocked,
-    });
+    }).catch(() => undefined);
   }, [agentAccessUnlocked, session, toolRegistry]);
 
   const signOut = () => {
-    void toolRegistry.sync({ signedIn: false, agentUnlocked: false });
+    void toolRegistry.sync({ signedIn: false, agentUnlocked: false }).catch(() => undefined);
     if (agentAccessUnlocked) {
       const version = bankStore.getState().stateVersion;
       bankStore.transact(version, `logout-agent-lock-${version}`, (draft) => {
@@ -80,7 +85,11 @@ export function BankShell() {
       <header className="bank-header">
         <Link className="wordmark" to="/" aria-label="At Attin home">At Attin</Link>
         <PrimaryNav />
-        <AgentStatus available={webMcpAvailable} unlocked={agentAccessUnlocked} />
+        <AgentStatus
+          available={webMcpAvailable}
+          registryStatus={registrySnapshot.status}
+          unlocked={agentAccessUnlocked}
+        />
       </header>
       <div className="bank-status-bar" role="status">
         <span>Fictional funds · No cash value</span>

@@ -133,6 +133,7 @@ function prepareTrustedContact(context: OperationContext): OperationPlan {
     consequences: [
       `Trusted contact: ${contact.name}`,
       `Relationship: ${contact.relationship}`,
+      `Contact: ${contact.contact}`,
       'This prototype never sends messages outside the device',
     ],
     reducer(draft) {

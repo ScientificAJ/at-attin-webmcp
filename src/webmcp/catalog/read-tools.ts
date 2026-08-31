@@ -52,6 +52,8 @@ const UNTRUSTED_READS = new Set<ReadOperationName>([
   'list_recurring_activity',
   'list_payees',
   'list_scheduled_payments',
+  'list_cards',
+  'get_card_controls',
   'list_budgets',
   'list_goals',
   'list_subscriptions',
