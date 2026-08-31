@@ -65,3 +65,4 @@ The user clarified that the hackathon prototype must contain a functional agent 
 - Proved that the first model request contains no bank state, an unsupported tool is rejected, and multi-step work opens a separate confirmation for every tool.
 - Added the agent UI and Worker tests first. The initial focused runs failed because the runtime, component, and Worker endpoint did not exist; the implemented focused slices then passed.
 - Final pre-publication verification passed: 11 files and 140/140 tests, lint with no findings, a 4,758-module production build, and the Sites Worker contract.
+- Sites version 4 deployed commit `00a276a5919d02fd99040e3cf36d16cc5627d891` privately with environment revision 1. A live authenticated production probe reached `moonshotai/Kimi-K3`, which selected the allowlisted `get_overview` WebMCP tool from a request containing no bank state.

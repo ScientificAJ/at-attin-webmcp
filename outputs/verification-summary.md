@@ -64,8 +64,10 @@ One low-severity deployment weakness was validated before release: the new trust
 
 ## Deployment proof
 
-- Sites version 3 saved from commit `fabb4c98c6b559d5e830b8c2852d63ae021ccff9` with the locally built archive and deployed successfully to production.
+- Sites version 4 saved from commit `00a276a5919d02fd99040e3cf36d16cc5627d891` with the locally built archive and deployed successfully to production.
 - Access remained private and owner-only: one allowed user, zero groups, and zero external visitors.
+- Environment revision 1 was applied to the deployment with a hidden `FEATHERLESS_API_KEY` secret and `FEATHERLESS_MODEL=moonshotai/Kimi-K3`.
+- An authenticated production `POST /api/agent` probe asked for an account overview with no bank state in the request. The live Featherless response identified `moonshotai/Kimi-K3` and selected the allowlisted `get_overview` WebMCP tool.
 - An authenticated root request returned only the intentional `/login` redirect document.
 - An authenticated direct request to `/settings/agent` returned HTTP 200, the complete At Attin app shell, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and the restrictive Permissions Policy.
-- The selected in-app browser reached the private Sites **Continue with ChatGPT** gate but did not hold a ChatGPT web session, so deployed-origin DOM interaction was not claimed. The identical commit/archive was exercised through the local selected-browser journeys and the emitted-Worker integration test; the production HTTP path was checked with Sites' owner bypass credential.
+- The selected in-app browser reached the private Sites **Continue with ChatGPT** gate but did not hold a ChatGPT web session, so deployed-origin DOM interaction was not claimed. The exact UI was exercised through local selected-browser journeys; the production Worker, Featherless request, model identity, and tool selection were verified at the deployed origin with the existing owner bypass credential.
