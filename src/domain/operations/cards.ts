@@ -59,7 +59,11 @@ function prepareLimit(context: OperationContext): OperationPlan {
 function prepareMerchantControl(context: OperationContext): OperationPlan {
   const card = findCard(context.state, requiredString(context.args, 'cardId'));
   ensureManageable(card);
-  const category = requiredString(context.args, 'category', 50);
+  const requestedCategory = requiredString(context.args, 'category', 50);
+  const categoryKey = requestedCategory.toLocaleLowerCase('en-US');
+  const category = card.merchantControls.find(
+    (item) => item.category.toLocaleLowerCase('en-US') === categoryKey,
+  )?.category ?? requestedCategory;
   const enabled = requiredBoolean(context.args, 'enabled');
   return {
     title: `Change ${category} card control`,
@@ -68,7 +72,9 @@ function prepareMerchantControl(context: OperationContext): OperationPlan {
     consequences: [`${category} card payments: ${enabled ? 'allowed' : 'blocked'}`],
     reducer(draft) {
       const mutable = mutableCard(draft, card.id);
-      const control = mutable.merchantControls.find((item) => item.category === category);
+      const control = mutable.merchantControls.find(
+        (item) => item.category.toLocaleLowerCase('en-US') === categoryKey,
+      );
       if (control) {
         control.enabled = enabled;
       } else {

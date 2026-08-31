@@ -153,20 +153,106 @@ describe('banking invariant and validation regressions', () => {
     }, fixedClock)).toThrow(/5,000 ATC balance floor/i);
   });
 
-  it('migrates legacy payment floors but backs up and reseeds malformed same-version state', () => {
+  it('fails closed when legacy actionable payment floors are unknown and reloads stably', () => {
     const legacy = createSeedState(fixedClock());
     for (const payment of legacy.payments) {
-      delete (payment as unknown as { balanceFloor?: unknown }).balanceFloor;
+      delete (payment as unknown as { balanceFloorStatus?: unknown }).balanceFloorStatus;
     }
+    delete (legacy.payments[0] as unknown as { balanceFloor?: unknown }).balanceFloor;
+    legacy.payments.find(({ id }) => id === 'payment-foundry-failed')!.balanceFloor = atc(7777);
     const legacyStorage = memoryStorage({
       [BANK_STORAGE_KEY]: JSON.stringify(legacy),
     });
     const migrated = createBankStore(legacyStorage, fixedClock);
-    expect(migrated.getState().payments.every((payment) =>
-      Number.isSafeInteger((payment as Payment & { balanceFloor?: number }).balanceFloor))).toBe(true);
-    expect(JSON.parse(legacyStorage.getItem(BANK_STORAGE_KEY) ?? '{}').payments[0]).toHaveProperty(
-      'balanceFloor',
+    expect(migrated.getState().recoveryNotice).toMatch(/payment.*floor.*review|reconfirm/i);
+    expect(migrated.getState().payments).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'payment-orbit-scheduled',
+        balanceFloor: null,
+        balanceFloorStatus: 'requires-reconfirmation',
+        status: 'cancelled',
+      }),
+      expect.objectContaining({
+        id: 'payment-northstar-recurring',
+        balanceFloor: null,
+        balanceFloorStatus: 'requires-reconfirmation',
+        status: 'paused',
+      }),
+      expect.objectContaining({
+        id: 'payment-foundry-failed',
+        balanceFloor: null,
+        balanceFloorStatus: 'requires-reconfirmation',
+        status: 'failed',
+      }),
+    ]));
+    expect(() => prepareOperation(migrated, 'resume_recurring_payment', {
+      paymentId: 'payment-northstar-recurring',
+    }, fixedClock)).toThrow(/reconfirm/i);
+    expect(() => prepareOperation(migrated, 'retry_failed_payment', {
+      paymentId: 'payment-foundry-failed',
+    }, fixedClock)).toThrow(/reconfirm/i);
+    expect(() => prepareOperation(migrated, 'update_recurring_payment', {
+      paymentId: 'payment-northstar-recurring',
+      amountMinor: atc(200),
+    }, fixedClock)).toThrow(/reconfirm/i);
+
+    const persistedAfterMigration = legacyStorage.getItem(BANK_STORAGE_KEY);
+    const reloaded = createBankStore(legacyStorage, fixedClock);
+    expect(legacyStorage.getItem(BANK_STORAGE_KEY)).toBe(persistedAfterMigration);
+    expect(reloaded.getState()).toEqual(migrated.getState());
+  });
+
+  it('reconfirms a valid legacy floor before resume or retry execution', () => {
+    const legacy = createSeedState(fixedClock());
+    for (const payment of legacy.payments) {
+      delete (payment as unknown as { balanceFloorStatus?: unknown }).balanceFloorStatus;
+    }
+    delete (legacy.payments[0] as unknown as { balanceFloor?: unknown }).balanceFloor;
+    const storage = memoryStorage({ [BANK_STORAGE_KEY]: JSON.stringify(legacy) });
+    const store = createBankStore(storage, fixedClock);
+
+    expect(() => prepareOperation(store, 'update_recurring_payment', {
+      paymentId: 'payment-northstar-recurring',
+      frequency: 'weekly',
+    }, fixedClock)).toThrow(/reconfirm/i);
+    expect(prepareOperation(store, 'update_recurring_payment', {
+      paymentId: 'payment-northstar-recurring',
+      balanceFloorMinor: atc(5000),
+    }, fixedClock).commit()).toMatchObject({ ok: true });
+    expect(store.getState().payments.find(
+      ({ id }) => id === 'payment-northstar-recurring',
+    )).toMatchObject({
+      balanceFloor: atc(5000),
+      balanceFloorStatus: 'confirmed',
+      status: 'paused',
+    });
+    expect(prepareOperation(store, 'resume_recurring_payment', {
+      paymentId: 'payment-northstar-recurring',
+    }, fixedClock).commit()).toMatchObject({ ok: true });
+
+    expect(prepareOperation(store, 'retry_failed_payment', {
+      paymentId: 'payment-foundry-failed',
+      balanceFloorMinor: atc(5000),
+    }, fixedClock).commit()).toMatchObject({ ok: true });
+    expect(createBankStore(storage, fixedClock).getState().payments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'payment-northstar-recurring',
+          balanceFloor: atc(5000),
+          balanceFloorStatus: 'confirmed',
+          status: 'scheduled',
+        }),
+        expect.objectContaining({
+          id: 'payment-foundry-failed',
+          balanceFloor: atc(5000),
+          balanceFloorStatus: 'confirmed',
+          status: 'completed',
+        }),
+      ]),
     );
+  });
+
+  it('backs up and reseeds malformed same-version state', () => {
 
     const malformedRaw = JSON.stringify({ schemaVersion: 1, stateVersion: 0 });
     const malformedStorage = memoryStorage({ [BANK_STORAGE_KEY]: malformedRaw });
@@ -181,6 +267,74 @@ describe('banking invariant and validation regressions', () => {
     const invalidStorage = memoryStorage({ [BANK_STORAGE_KEY]: invalidRaw });
     createBankStore(invalidStorage, fixedClock);
     expect(invalidStorage.getItem(BANK_BACKUP_KEY)).toBe(invalidRaw);
+  });
+
+  it('removes a payee while preserving completed history and blocking actionable links', () => {
+    const storage = memoryStorage();
+    const store = createBankStore(storage, fixedClock);
+    expect(prepareOperation(store, 'pay_payee', {
+      sourceAccountId: 'account-daily',
+      payeeId: 'payee-mara',
+      amountMinor: atc(100),
+      balanceFloorMinor: atc(5000),
+    }, fixedClock).commit()).toMatchObject({ ok: true });
+
+    const removal = prepareOperation(store, 'remove_payee', {
+      payeeId: 'payee-mara',
+    }, fixedClock);
+    expect(removal.consequences.join('\n')).toMatch(/preserve 1 historical payment/i);
+    expect(removal.commit()).toMatchObject({ ok: true });
+    expect(store.getState().payees.some(({ id }) => id === 'payee-mara')).toBe(false);
+    expect(store.getState().payments.at(-1)).toMatchObject({
+      payeeName: 'Mara Vale',
+      status: 'completed',
+    });
+    expect(store.getState().payments.at(-1)).not.toHaveProperty('payeeId');
+    expect(createBankStore(storage, fixedClock).getState().payments.at(-1)).toMatchObject({
+      payeeName: 'Mara Vale',
+      status: 'completed',
+    });
+
+    expect(() => prepareOperation(
+      createBankStore(memoryStorage(), fixedClock),
+      'remove_payee',
+      { payeeId: 'payee-foundry' },
+      fixedClock,
+    )).toThrow(/actionable|failed|retry/i);
+  });
+
+  it('canonicalizes merchant-control categories before confirmation and commit', () => {
+    const store = createBankStore(memoryStorage(), fixedClock);
+    const prepared = prepareOperation(store, 'set_merchant_control', {
+      cardId: 'card-daily',
+      category: 'gambling',
+      enabled: true,
+    }, fixedClock);
+
+    expect(prepared.consequences).toContain('Gambling card payments: allowed');
+    expect(prepared.commit()).toMatchObject({ ok: true });
+    expect(store.getState().cards[0]?.merchantControls.filter(
+      ({ category }) => category.toLocaleLowerCase('en-US') === 'gambling',
+    )).toEqual([{ category: 'Gambling', enabled: true }]);
+  });
+
+  it('rejects dispute notes whose accumulated evidence would exceed 2,000 characters', () => {
+    const store = createBankStore(memoryStorage(), fixedClock);
+    expect(store.transact(0, 'long-existing-evidence', (draft) => {
+      draft.disputes[0]!.evidenceNote = 'e'.repeat(1900);
+    })).toMatchObject({ ok: true });
+
+    expect(() => prepareOperation(store, 'add_dispute_note', {
+      disputeId: 'dispute-demo-open',
+      note: 'n'.repeat(100),
+    }, fixedClock)).toThrow(/2,000 characters/i);
+
+    const exactLimit = prepareOperation(store, 'add_dispute_note', {
+      disputeId: 'dispute-demo-open',
+      note: 'n'.repeat(99),
+    }, fixedClock);
+    expect(exactLimit.commit()).toMatchObject({ ok: true });
+    expect(store.getState().disputes[0]?.evidenceNote).toHaveLength(2000);
   });
 
   it.each([

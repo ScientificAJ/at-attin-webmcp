@@ -69,9 +69,11 @@ export interface Payment {
   sourceAccountId: string;
   destinationAccountId?: string;
   payeeId?: string;
+  payeeName?: string;
   requestFrom?: string;
   amount: MinorATC;
-  balanceFloor: MinorATC;
+  balanceFloor: MinorATC | null;
+  balanceFloorStatus: 'confirmed' | 'requires-reconfirmation';
   date: string;
   recurrence: PaymentRecurrence | null;
   status: 'scheduled' | 'completed' | 'paused' | 'failed' | 'cancelled' | 'requested';

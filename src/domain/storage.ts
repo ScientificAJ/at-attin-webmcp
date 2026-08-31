@@ -20,32 +20,52 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function migratePaymentFloors(value: unknown): boolean {
+const PAYMENT_SAFEGUARD_NOTICE =
+  'Saved payments with an unknown confirmed balance floor need review. Actionable payments were paused or cancelled; a human must explicitly reconfirm a valid floor before they can run.';
+
+function migratePaymentSafeguards(value: unknown): boolean {
   if (!isRecord(value)
     || value.schemaVersion !== BANK_SCHEMA_VERSION
-    || !Array.isArray(value.accounts)
+    || !Array.isArray(value.payees)
     || !Array.isArray(value.payments)) {
     return false;
   }
-  const accountFloors = new Map<string, number>();
-  for (const account of value.accounts) {
-    if (isRecord(account)
-      && typeof account.id === 'string'
-      && Number.isSafeInteger(account.balanceFloor)
-      && (account.balanceFloor as number) >= 0) {
-      accountFloors.set(account.id, account.balanceFloor as number);
+
+  const payeeNames = new Map<string, string>();
+  for (const payee of value.payees) {
+    if (isRecord(payee)
+      && typeof payee.id === 'string'
+      && typeof payee.name === 'string') {
+      payeeNames.set(payee.id, payee.name);
     }
   }
+
   let migrated = false;
+  let requiresSafeguardReview = false;
   for (const payment of value.payments) {
-    if (!isRecord(payment) || payment.balanceFloor !== undefined) continue;
-    const sourceFloor = typeof payment.sourceAccountId === 'string'
-      ? accountFloors.get(payment.sourceAccountId)
+    if (!isRecord(payment)) continue;
+
+    const payeeName = typeof payment.payeeId === 'string'
+      ? payeeNames.get(payment.payeeId)
       : undefined;
-    if (sourceFloor !== undefined) {
-      payment.balanceFloor = sourceFloor;
+    if (payment.payeeName === undefined && payeeName !== undefined) {
+      payment.payeeName = payeeName;
       migrated = true;
     }
+
+    if (payment.balanceFloorStatus !== undefined) continue;
+
+    payment.balanceFloor = null;
+    payment.balanceFloorStatus = 'requires-reconfirmation';
+    if (payment.status === 'scheduled') {
+      payment.status = isRecord(payment.recurrence) ? 'paused' : 'cancelled';
+    }
+    migrated = true;
+    requiresSafeguardReview = true;
+  }
+
+  if (requiresSafeguardReview) {
+    value.recoveryNotice = PAYMENT_SAFEGUARD_NOTICE;
   }
   return migrated;
 }
@@ -71,7 +91,7 @@ export class StorageAdapter {
     }
 
     try {
-      const needsSave = migratePaymentFloors(parsed);
+      const needsSave = migratePaymentSafeguards(parsed);
       return { state: parseBankState(parsed), needsSave };
     } catch {
       return this.recover(raw, 'An invalid saved demo was backed up and reset.');

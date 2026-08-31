@@ -94,9 +94,11 @@ const paymentSchema = z.object({
   sourceAccountId: stableId,
   destinationAccountId: stableId.optional(),
   payeeId: stableId.optional(),
+  payeeName: namedText(80).optional(),
   requestFrom: namedText(80).optional(),
   amount: positiveMinor,
-  balanceFloor: nonNegativeMinor,
+  balanceFloor: nonNegativeMinor.nullable(),
+  balanceFloorStatus: z.enum(['confirmed', 'requires-reconfirmation']),
   date: timestamp,
   recurrence: recurrenceSchema.nullable(),
   status: z.enum([
@@ -301,8 +303,26 @@ export function validateBankStateInvariants(state: Readonly<BankState>): void {
       || (payment.payeeId && !payeeIds.has(payment.payeeId))) {
       throw new BankStateValidationError(`${payment.id} has an invalid payment link`);
     }
-    if (!payment.payeeId && !payment.destinationAccountId && !payment.requestFrom) {
+    const hasHistoricalPayee = Boolean(
+      payment.payeeName
+      && ['completed', 'cancelled'].includes(payment.status),
+    );
+    if (!payment.payeeId
+      && !payment.destinationAccountId
+      && !payment.requestFrom
+      && !hasHistoricalPayee) {
       throw new BankStateValidationError(`${payment.id} has no payment destination`);
+    }
+    if (payment.balanceFloorStatus === 'confirmed' && payment.balanceFloor === null) {
+      throw new BankStateValidationError(`${payment.id} has no confirmed balance floor`);
+    }
+    if (payment.balanceFloorStatus === 'requires-reconfirmation'
+      && payment.balanceFloor !== null) {
+      throw new BankStateValidationError(`${payment.id} has an unconfirmed balance floor`);
+    }
+    if (payment.balanceFloorStatus === 'requires-reconfirmation'
+      && payment.status === 'scheduled') {
+      throw new BankStateValidationError(`${payment.id} must not run before floor reconfirmation`);
     }
     if (payment.status === 'requested' && !payment.requestFrom) {
       throw new BankStateValidationError(`${payment.id} is an invalid money request`);

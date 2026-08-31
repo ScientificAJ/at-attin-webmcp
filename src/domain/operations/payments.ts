@@ -50,7 +50,7 @@ function completedPaymentRecords(
   payeeId: string,
   payeeName: string,
   amount: Payment['amount'],
-  balanceFloor: Payment['balanceFloor'],
+  balanceFloor: NonNullable<Payment['balanceFloor']>,
   note: string,
 ): { payment: Payment; transaction: Transaction } {
   return {
@@ -58,8 +58,10 @@ function completedPaymentRecords(
       id: `payment-${context.operationId}`,
       sourceAccountId,
       payeeId,
+      payeeName,
       amount,
       balanceFloor,
+      balanceFloorStatus: 'confirmed',
       date: context.now.toISOString(),
       recurrence: null,
       status: 'completed',
@@ -238,8 +240,10 @@ function prepareSchedule(context: OperationContext, recurring: boolean): Operati
         id: paymentId,
         sourceAccountId: source.id,
         payeeId: payee.id,
+        payeeName: payee.name,
         amount,
         balanceFloor: floor,
+        balanceFloorStatus: 'confirmed',
         date: `${date}T09:00:00.000Z`,
         recurrence: paymentRecurrence,
         status: 'scheduled',
@@ -280,10 +284,18 @@ function prepareUpdateRecurring(context: OperationContext): OperationPlan {
   const frequency = (frequencyValue ?? payment.recurrence.frequency) as PaymentRecurrence['frequency'];
   const source = findAccount(state, payment.sourceAccountId);
   const requestedFloor = optionalMinor(args, 'balanceFloorMinor', { allowZero: true });
+  if (payment.balanceFloorStatus === 'requires-reconfirmation'
+    && requestedFloor === undefined) {
+    throw new Error('Explicitly reconfirm a valid balance floor before updating this payment');
+  }
+  const effectiveFloor = requestedFloor ?? payment.balanceFloor;
+  if (effectiveFloor === null) {
+    throw new Error('Explicitly reconfirm a valid balance floor before updating this payment');
+  }
   const { floor } = floorAfter(
     source,
     amount,
-    requestedFloor ?? payment.balanceFloor,
+    effectiveFloor,
     reservedForGoals(state, source.id),
   );
 
@@ -301,6 +313,7 @@ function prepareUpdateRecurring(context: OperationContext): OperationPlan {
       const mutable = mutablePayment(draft, payment.id);
       mutable.amount = amount;
       mutable.balanceFloor = floor;
+      mutable.balanceFloorStatus = 'confirmed';
       mutable.date = `${nextDate}T09:00:00.000Z`;
       mutable.recurrence = { frequency, nextDate, endDate };
       appendAudit(draft, context, payment.id, 'Recurring payment details updated.');
@@ -325,6 +338,10 @@ function preparePaymentStatus(
   if (operation !== 'cancel_scheduled_payment' && !payment.recurrence) {
     throw new Error('Payment is not recurring');
   }
+  if (operation === 'resume_recurring_payment'
+    && payment.balanceFloorStatus === 'requires-reconfirmation') {
+    throw new Error('Explicitly reconfirm a valid balance floor before resuming this payment');
+  }
 
   return {
     title: `${rule.label} payment`,
@@ -345,10 +362,23 @@ function prepareRetry(context: OperationContext): OperationPlan {
   }
   const source = findAccount(context.state, payment.sourceAccountId);
   const payee = payment.payeeId ? findPayee(context.state, payment.payeeId) : null;
+  const requestedFloor = optionalMinor(
+    context.args,
+    'balanceFloorMinor',
+    { allowZero: true },
+  );
+  if (payment.balanceFloorStatus === 'requires-reconfirmation'
+    && requestedFloor === undefined) {
+    throw new Error('Explicitly reconfirm a valid balance floor before retrying this payment');
+  }
+  const effectiveFloor = requestedFloor ?? payment.balanceFloor;
+  if (effectiveFloor === null) {
+    throw new Error('Explicitly reconfirm a valid balance floor before retrying this payment');
+  }
   floorAfter(
     source,
     payment.amount,
-    payment.balanceFloor,
+    effectiveFloor,
     reservedForGoals(context.state, source.id),
   );
 
@@ -359,6 +389,7 @@ function prepareRetry(context: OperationContext): OperationPlan {
     consequences: [
       `Retry ${formatATC(payment.amount)}${payee ? ` to ${payee.name}` : ''}`,
       `Balance after: ${formatATC(subtractATC(source.balance, payment.amount))}`,
+      `Balance floor: ${formatATC(effectiveFloor)}`,
     ],
     reducer(draft) {
       const mutableSource = mutableAccount(draft, source.id);
@@ -367,7 +398,10 @@ function prepareRetry(context: OperationContext): OperationPlan {
         mutableSource.availableBalance,
         payment.amount,
       );
-      mutablePayment(draft, payment.id).status = 'completed';
+      const mutable = mutablePayment(draft, payment.id);
+      mutable.balanceFloor = effectiveFloor;
+      mutable.balanceFloorStatus = 'confirmed';
+      mutable.status = 'completed';
       draft.transactions.push({
         id: `transaction-${context.operationId}`,
         accountId: source.id,
@@ -403,6 +437,7 @@ function prepareRequestMoney(context: OperationContext): OperationPlan {
         requestFrom: from,
         amount,
         balanceFloor: source.balanceFloor,
+        balanceFloorStatus: 'confirmed',
         date: context.now.toISOString(),
         recurrence: null,
         status: 'requested',
@@ -476,16 +511,31 @@ function prepareUpdatePayee(context: OperationContext): OperationPlan {
 
 function prepareRemovePayee(context: OperationContext): OperationPlan {
   const payee = findPayee(context.state, requiredString(context.args, 'payeeId'));
-  if (context.state.payments.some((payment) =>
-    payment.payeeId === payee.id && ['scheduled', 'paused'].includes(payment.status))) {
-    throw new Error('Cancel this payee’s scheduled payments before removing them');
+  const linkedPayments = context.state.payments.filter(
+    (payment) => payment.payeeId === payee.id,
+  );
+  const actionablePayments = linkedPayments.filter(
+    (payment) => !['completed', 'cancelled'].includes(payment.status),
+  );
+  if (actionablePayments.length > 0) {
+    throw new Error(
+      'Cancel scheduled payments and resolve failed or otherwise actionable payments before removing this payee',
+    );
   }
   return {
     title: `Remove ${payee.name}`,
     risk: 'high',
     disclosure: [],
-    consequences: [`Remove ${payee.name} from saved payees`, 'Past payments remain in activity'],
+    consequences: [
+      `Remove ${payee.name} from saved payees`,
+      `Preserve ${linkedPayments.length} historical payment${linkedPayments.length === 1 ? '' : 's'} under ${payee.name}`,
+    ],
     reducer(draft) {
+      for (const payment of draft.payments) {
+        if (payment.payeeId !== payee.id) continue;
+        payment.payeeName = payment.payeeName ?? payee.name;
+        delete payment.payeeId;
+      }
       draft.payees = draft.payees.filter(({ id }) => id !== payee.id);
       appendAudit(draft, context, payee.id, `Payee ${payee.name} removed.`);
     },

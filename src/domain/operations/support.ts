@@ -75,6 +75,10 @@ function prepareDisputeNote(context: OperationContext): OperationPlan {
     throw new Error('A resolved dispute cannot be changed');
   }
   const note = requiredString(context.args, 'note', 500);
+  const evidenceNote = [dispute.evidenceNote, note].filter(Boolean).join('\n');
+  if (evidenceNote.length > 2_000) {
+    throw new Error('Accumulated dispute evidence cannot exceed 2,000 characters');
+  }
   return {
     title: 'Add dispute evidence note',
     risk: 'medium',
@@ -83,7 +87,7 @@ function prepareDisputeNote(context: OperationContext): OperationPlan {
     reducer(draft) {
       const mutable = draft.disputes.find(({ id }) => id === dispute.id);
       if (!mutable) throw new Error('Prepared dispute is no longer available');
-      mutable.evidenceNote = [mutable.evidenceNote, note].filter(Boolean).join('\n');
+      mutable.evidenceNote = evidenceNote;
       appendAudit(draft, context, dispute.id, 'Evidence note added to dispute.');
     },
   };

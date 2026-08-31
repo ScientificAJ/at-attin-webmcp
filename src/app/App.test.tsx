@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { atc } from '../domain/money';
 import { prepareOperation } from '../domain/operations/types';
+import { createSeedState } from '../domain/seed';
 import { createBankStore } from '../domain/store';
 import {
   BANK_BACKUP_KEY,
@@ -143,6 +144,22 @@ describe('At Attin application shell', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/saved demo was backed up and reset/i);
     expect(storage.getItem(BANK_BACKUP_KEY)).toBe(malformed);
     expect(screen.getByText(`${new Intl.NumberFormat('en-US').format(atc(42860) / 100)} ATC`)).toBeVisible();
+  });
+
+  it('visibly surfaces the required review after legacy payment safeguards migrate', () => {
+    const legacy = createSeedState(new Date('2026-08-31T09:00:00Z'));
+    for (const payment of legacy.payments) {
+      delete (payment as unknown as { balanceFloorStatus?: unknown }).balanceFloorStatus;
+    }
+    delete (legacy.payments[0] as unknown as { balanceFloor?: unknown }).balanceFloor;
+    const storage = memoryStorage({
+      [BANK_STORAGE_KEY]: JSON.stringify(legacy),
+    });
+    const store = createBankStore(storage, () => new Date('2026-08-31T09:00:00Z'));
+
+    renderAuthenticated('/', { store });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/payment.*floor.*review|reconfirm/i);
   });
 
   it('provides an accessible compact More disclosure for lower-frequency routes', () => {
