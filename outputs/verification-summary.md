@@ -6,7 +6,7 @@ Branch: `feature/at-attin-webmcp`
 
 Sites project: `At Attin`
 
-Production URL: pending final Sites publication
+Production URL: [https://at-attin.astronebulae.chatgpt.site](https://at-attin.astronebulae.chatgpt.site)
 
 ## Automated proof
 
@@ -44,7 +44,7 @@ The selected Codex in-app browser did not expose `document.modelContext`, so a l
 
 A complete release-branch diff scan reviewed 102 inventory rows plus the supporting Sites Worker response path. The authorization, disclosure, native lifecycle, schema, atomic persistence, output, and untrusted-content controls produced no surviving issue.
 
-One low-severity deployment weakness was validated before release: the new trusted-click confirmation UI could be framed because the template Worker did not set repository-owned anti-clickjacking headers. A focused Worker assertion failed first. The release now adds `Content-Security-Policy` with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and a restrictive Permissions Policy; the same focused test then passed. The issue is closed before publication.
+One low-severity deployment weakness was validated before release: the new trusted-click confirmation UI could be framed because the template Worker did not set repository-owned anti-clickjacking headers. A focused Worker assertion failed first. The first private publication then proved that Sites serves matching root assets before the Worker. The final fix therefore covers both paths: `public/_headers` protects static assets, while the Worker protects fallback responses and fetches `/` without a redirect. Both paths set `Content-Security-Policy` with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and a restrictive Permissions Policy.
 
 ## Release boundary
 

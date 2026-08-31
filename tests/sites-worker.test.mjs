@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import worker from "../worker/index.js";
 
@@ -29,8 +29,8 @@ test("falls back to index.html for an unknown app route", async () => {
         fetch: async (request) => {
           const url = new URL(request.url);
           calls.push(url.pathname + url.search);
-          return new Response(url.pathname === "/index.html" ? "app" : "missing", {
-            status: url.pathname === "/index.html" ? 200 : 404,
+          return new Response(url.pathname === "/" ? "app" : "missing", {
+            status: url.pathname === "/" ? 200 : 404,
           });
         },
       },
@@ -38,7 +38,7 @@ test("falls back to index.html for an unknown app route", async () => {
   );
 
   assert.equal(response.status, 200);
-  assert.deepEqual(calls, ["/flow/step-two?source=share", "/index.html"]);
+  assert.deepEqual(calls, ["/flow/step-two?source=share", "/"]);
 });
 
 test("adds browser security headers to prevent confirmation clickjacking", async () => {
@@ -90,4 +90,10 @@ test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));
   await access(new URL("../dist/.openai/hosting.json", import.meta.url));
+  const staticHeaders = await readFile(
+    new URL("../dist/client/_headers", import.meta.url),
+    "utf8",
+  );
+  assert.match(staticHeaders, /frame-ancestors 'none'/);
+  assert.match(staticHeaders, /X-Frame-Options: DENY/i);
 });

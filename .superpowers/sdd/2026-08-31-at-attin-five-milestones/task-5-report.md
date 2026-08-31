@@ -49,4 +49,6 @@
 
 - Sites project ID: `appgprj_6a958508a92c81919d2f8252caa4106e`.
 - Access check: custom owner-only policy, one allowed user, zero groups, zero external visitors.
-- Saved version, production URL, and deployed-origin checks will be appended after publication.
+- Production URL: `https://at-attin.astronebulae.chatgpt.site`.
+- The first private publication exposed a real hosting detail: matching root assets bypass the Worker by default, and the original fallback fetch of `/index.html` canonicalized to `/`. Added a static `_headers` manifest and changed the Worker fallback fetch to `/`; a new build-contract assertion proves both protections are packaged.
+- Final Sites version and deployed-origin checks will be appended after the hardened publication.

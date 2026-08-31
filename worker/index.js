@@ -8,8 +8,8 @@ const SECURITY_HEADERS = {
     "frame-ancestors 'none'",
     "img-src 'self' data:",
     "object-src 'none'",
-    "script-src 'self'",
-    "style-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
   ].join("; "),
   "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
   "Referrer-Policy": "no-referrer",
@@ -39,7 +39,7 @@ export default {
     }
 
     const indexUrl = new URL(request.url);
-    indexUrl.pathname = "/index.html";
+    indexUrl.pathname = "/";
     indexUrl.search = "";
     return secure(await env.ASSETS.fetch(new Request(indexUrl, request)));
   },
