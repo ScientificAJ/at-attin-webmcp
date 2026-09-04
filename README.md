@@ -9,6 +9,7 @@ ATC is fictional, device-local money with no cash value. There are no real payme
 ## Try the prototype
 
 - Deployed demo: [https://at-attin.astronebulae.chatgpt.site](https://at-attin.astronebulae.chatgpt.site)
+- Two-minute demo: [https://youtu.be/pVwpQP33IWI](https://youtu.be/pVwpQP33IWI)
 - Access: public judge URL; At Attin's own prototype login is the only sign-in gate.
 - Username: `john.attin`
 - Password: `attin2026`
