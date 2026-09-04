@@ -29,7 +29,6 @@ export function BankShell() {
     embeddedAgent,
     session,
     toolRegistry,
-    webMcpAvailable,
   } = useAppServices();
   const state = useBankState();
   const registrySnapshot = useSyncExternalStore(
@@ -88,7 +87,6 @@ export function BankShell() {
         <Link className="wordmark" to="/" aria-label="At Attin home">At Attin</Link>
         <PrimaryNav />
         <AgentStatus
-          available={webMcpAvailable}
           registryStatus={registrySnapshot.status}
           unlocked={agentAccessUnlocked}
         />

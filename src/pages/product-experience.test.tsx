@@ -84,7 +84,7 @@ describe('complete At Attin product experience', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'You are in control.' })).toBeVisible();
-    expect(screen.getByText('In-site agent and browser WebMCP ready')).toBeVisible();
+    expect(screen.getByText('In-site agent and 56 browser WebMCP tools ready')).toBeVisible();
     expect(screen.getByText('Every task requires confirmation')).toBeVisible();
     expect(screen.getByText('One action at a time')).toBeVisible();
     expect(screen.getByText('Permissions expire automatically')).toBeVisible();

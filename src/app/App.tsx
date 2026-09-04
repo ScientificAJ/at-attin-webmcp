@@ -29,11 +29,6 @@ import '../styles/support.css';
 import '../styles/agent-console.css';
 import { AppRouteTree, type AppServices } from './routes';
 
-function supportsWebMcp(): boolean {
-  return typeof document !== 'undefined'
-    && typeof document.modelContext?.registerTool === 'function';
-}
-
 function createDeferredBankStore(session: SessionStore): BankStore {
   let activeStore: BankStore | null = null;
   const listeners = new Set<() => void>();
@@ -78,7 +73,6 @@ export function App() {
     return {
       session,
       bankStore,
-      webMcpAvailable: supportsWebMcp(),
       confirmationCoordinator,
       toolBridge,
       toolRegistry,

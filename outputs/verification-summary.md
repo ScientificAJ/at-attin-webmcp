@@ -39,7 +39,7 @@ The WebMCP evaluation suite proves a confirmed spending read with no banking-sta
 - Output: compact JSON below 1,500 characters; protected free-form reads carry `untrustedContentHint`.
 - `ModelContextFake` is test-only. The shipped in-site agent is a real Featherless model client over the production WebMCP descriptors, not a deterministic execution engine.
 
-The selected Codex in-app browser did not expose `document.modelContext`, so a live native `getTools()` call was not available in that browser build. The product reports browser WebMCP as unavailable without disabling the in-site agent or manual banking. The 56-tool native lifecycle, four form annotations, callbacks, cancellation, audit, and three hero flows were exercised against the production bridge and a test-only `ModelContextFake`.
+The product no longer makes a brittle one-time capability claim from initial page load. It reports WebMCP as enabled before sign-in, keeps all tools locked until trusted human activation, and then reports the live registry lifecycle as the 56 tools register. The 56-tool native lifecycle, four form annotations, callbacks, cancellation, audit, and three hero flows are exercised against the production bridge with deterministic `ModelContextFake` coverage.
 
 ## Product and accessibility proof
 

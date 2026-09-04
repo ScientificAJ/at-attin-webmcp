@@ -35,7 +35,7 @@ At Attin includes an in-site natural-language agent powered by Featherless and `
 
 - **56 imperative tools** are registered with `document.modelContext.registerTool(...)` only after sign-in and a trusted human unlocks Agent Access.
 - **Four declarative tools** annotate visible forms for transaction filtering, statement dates, report comparison, and audit filtering.
-- **The in-site agent** uses those same 56 descriptors, so it works in ordinary browsers even when native `document.modelContext` is unavailable.
+- **The in-site agent** uses those same 56 descriptors. Browser-native WebMCP registers them after sign-in and a trusted click on Unlock Agent Access.
 - **Compatible browser agents** can still discover the native WebMCP catalogue when the experimental API is present.
 - Manual UI and WebMCP use the same domain operation service, validation, integer-money model, consequence preview, and atomic commit path.
 
@@ -89,7 +89,7 @@ The production build emits `dist/client`, `dist/server/index.js`, and `dist/.ope
 
 Manual banking and the deployed in-site Featherless agent work in ordinary current browsers. The model endpoint runs in the deployed Sites Worker because its API key is a private server secret; a plain local Vite preview has no model secret and therefore keeps the banking UI usable while the remote agent endpoint is unavailable.
 
-Experimental browser-native WebMCP remains a progressive enhancement. If `document.modelContext` exists, At Attin registers the same 56 imperative tools for compatible browser agents. The UI reports that browser-specific status separately from the in-site agent. Tests use a `ModelContextFake` solely to verify the native registration and callback contract.
+Browser-native WebMCP registers the same 56 imperative tools after the user signs in and unlocks Agent Access with a trusted click. The header reports the actual registration lifecycle rather than a one-time page-load feature check. Tests use a `ModelContextFake` to verify the native registration and callback contract deterministically.
 
 ## Project map
 

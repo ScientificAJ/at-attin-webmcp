@@ -20,7 +20,7 @@ interface AgentAccessControlProps {
 export function AgentAccessControl({ detailed = false }: AgentAccessControlProps) {
   const state = useBankState();
   const signedIn = useSignedIn();
-  const { bankStore, toolRegistry, trustPredicate, webMcpAvailable } = useAppServices();
+  const { bankStore, toolRegistry, trustPredicate } = useAppServices();
   const unlocked = state.user.preferences.agentAccessUnlocked;
   const [message, setMessage] = useState('');
 
@@ -62,9 +62,7 @@ export function AgentAccessControl({ detailed = false }: AgentAccessControlProps
       <header>
         <p className="eyebrow">Human control</p>
         <h2 id="agent-control-title">Agent access</h2>
-        <p>{webMcpAvailable
-          ? 'In-site agent and browser WebMCP ready'
-          : 'In-site Featherless agent ready · browser WebMCP unavailable'}</p>
+        <p>In-site agent and 56 browser WebMCP tools ready</p>
       </header>
       {detailed ? (
         <ul className="agent-capabilities">

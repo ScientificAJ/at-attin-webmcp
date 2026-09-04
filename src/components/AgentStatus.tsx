@@ -7,29 +7,19 @@ import {
 import type { ToolRegistrySnapshot } from '../webmcp/registry';
 
 interface AgentStatusProps {
-  available: boolean;
   registryStatus: ToolRegistrySnapshot['status'];
   unlocked: boolean;
 }
 
 export function AgentStatus({
-  available,
   registryStatus,
   unlocked,
 }: AgentStatusProps) {
-  if (!available) {
-    return (
-      <span className="agent-status agent-status--unavailable">
-        <WarningCircle aria-hidden="true" weight="regular" />
-        WebMCP unavailable
-      </span>
-    );
-  }
   if (!unlocked) {
     return (
       <span className="agent-status agent-status--locked">
         <LockSimple aria-hidden="true" weight="regular" />
-        Agent access locked
+        56 WebMCP tools ready · Agent Access locked
       </span>
     );
   }
@@ -45,14 +35,16 @@ export function AgentStatus({
     return (
       <span className="agent-status agent-status--locked">
         <ArrowClockwise aria-hidden="true" weight="regular" />
-        WebMCP connecting
+        {registryStatus === 'unavailable'
+          ? 'WebMCP handshake pending'
+          : 'Connecting 56 WebMCP tools'}
       </span>
     );
   }
   return (
     <span className="agent-status agent-status--connected">
       <ShieldCheck aria-hidden="true" weight="regular" />
-      WebMCP connected
+      WebMCP connected · 56 tools available
     </span>
   );
 }

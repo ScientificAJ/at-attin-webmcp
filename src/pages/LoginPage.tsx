@@ -19,7 +19,7 @@ interface RedirectState {
 }
 
 export function LoginPage() {
-  const { session, webMcpAvailable } = useAppServices();
+  const { session } = useAppServices();
   const signedIn = useSignedIn();
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,7 +55,7 @@ export function LoginPage() {
         </div>
         <p className="login-readiness">
           <ShieldCheck aria-hidden="true" weight="regular" />
-          {webMcpAvailable ? 'WebMCP ready' : 'WebMCP unavailable'}
+          WebMCP enabled · Sign in to activate
         </p>
       </section>
       <section className="login-panel" aria-label="Prototype sign in">

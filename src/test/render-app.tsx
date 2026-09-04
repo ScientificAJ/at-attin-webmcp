@@ -66,7 +66,6 @@ export function renderRouter(
   const services: AppServices = {
     session,
     bankStore: store,
-    webMcpAvailable: options.webMcpAvailable ?? false,
     confirmationCoordinator,
     toolBridge,
     toolRegistry,

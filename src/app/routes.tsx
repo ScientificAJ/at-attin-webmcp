@@ -37,7 +37,6 @@ import type { ToolRegistry } from '../webmcp/registry';
 export interface AppServices {
   session: SessionStore;
   bankStore: BankStore;
-  webMcpAvailable: boolean;
   confirmationCoordinator: ConfirmationCoordinator;
   toolBridge: ToolBridge;
   toolRegistry: ToolRegistry;

@@ -43,7 +43,7 @@ describe('At Attin application shell', () => {
     expect(screen.getByText(/ATC is fictional and has no cash value/i)).toBeVisible();
   });
 
-  it('treats a present but unusable model context as unavailable', async () => {
+  it('describes WebMCP as enabled before sign in even when the browser injects it later', async () => {
     const descriptor = Object.getOwnPropertyDescriptor(document, 'modelContext');
     Object.defineProperty(document, 'modelContext', {
       configurable: true,
@@ -51,7 +51,7 @@ describe('At Attin application shell', () => {
     });
     try {
       const view = render(<App />);
-      expect(await screen.findByText('WebMCP unavailable')).toBeVisible();
+      expect(await screen.findByText('WebMCP enabled · Sign in to activate')).toBeVisible();
       view.unmount();
     } finally {
       if (descriptor) {
@@ -210,14 +210,14 @@ describe('At Attin application shell', () => {
     expect(disclosure).not.toHaveAttribute('open');
   });
 
-  it('shows fictional-funds and all shell-level WebMCP availability states', async () => {
-    const unavailable = renderAuthenticated('/');
+  it('shows fictional-funds and all shell-level WebMCP lifecycle states', async () => {
+    const lockedByDefault = renderAuthenticated('/');
     expect(screen.getByText('Fictional funds · No cash value')).toBeVisible();
-    expect(screen.getByText('WebMCP unavailable')).toBeVisible();
-    unavailable.unmount();
+    expect(screen.getByText('56 WebMCP tools ready · Agent Access locked')).toBeVisible();
+    lockedByDefault.unmount();
 
     const locked = renderAuthenticated('/', { webMcpAvailable: true });
-    expect(screen.getByText('Agent access locked')).toBeVisible();
+    expect(screen.getByText('56 WebMCP tools ready · Agent Access locked')).toBeVisible();
     locked.unmount();
 
     const connected = renderAuthenticated('/', {
@@ -225,7 +225,7 @@ describe('At Attin application shell', () => {
       agentUnlocked: true,
       modelContext: new ModelContextFake(),
     });
-    expect(await screen.findByText('WebMCP connected')).toBeVisible();
+    expect(await screen.findByText('WebMCP connected · 56 tools available')).toBeVisible();
     connected.unmount();
 
     renderAuthenticated('/', {
@@ -236,11 +236,11 @@ describe('At Attin application shell', () => {
     expect(await screen.findByText('WebMCP needs attention')).toBeVisible();
   });
 
-  it('keeps the model-backed At Attin agent available when browser WebMCP is unavailable', async () => {
+  it('keeps the model-backed At Attin agent available while the browser handshake is pending', async () => {
     const user = userEvent.setup();
     renderAuthenticated('/', { webMcpAvailable: false });
 
-    expect(screen.getByText('WebMCP unavailable')).toBeVisible();
+    expect(screen.getByText('56 WebMCP tools ready · Agent Access locked')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Open At Attin agent' }));
     expect(screen.getByRole('heading', { name: 'Ask At Attin' })).toBeVisible();
     expect(screen.getByText(/featherless provides the reasoning/i)).toBeVisible();
@@ -303,7 +303,7 @@ describe('At Attin application shell', () => {
     await user.click(screen.getByRole('button', { name: 'Unlock Agent Access' }));
     await waitFor(() => expect(modelContext.tools.size).toBe(56));
     expect(view.store.getState().user.preferences.agentAccessUnlocked).toBe(true);
-    expect(screen.getByText('WebMCP connected')).toBeVisible();
+    expect(screen.getByText('WebMCP connected · 56 tools available')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Lock Agent Access' }));
     await waitFor(() => expect(modelContext.tools.size).toBe(0));
